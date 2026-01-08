@@ -9,6 +9,7 @@ import Bookmarks from './pages/Bookmarks';
 import Folders from './pages/Folders';
 import Tags from './pages/Tags';
 import Profile from './pages/Profile';
+import Admin from './pages/Admin';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -30,19 +31,11 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AppRoutes() {
+function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { t } = useTranslation();
-  const [setupStatus, setSetupStatus] = React.useState<{ initialized: boolean } | null>(null);
 
-  React.useEffect(() => {
-    fetch('/api/auth/setup/status')
-      .then(res => res.json())
-      .then(data => setSetupStatus(data))
-      .catch(() => setSetupStatus({ initialized: true }));
-  }, []);
-
-  if (loading || !setupStatus) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">{t('common.loading')}</div>
@@ -50,10 +43,56 @@ function AppRoutes() {
     );
   }
 
-  if (!setupStatus.initialized) {
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!user.is_admin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  const { user, loading } = useAuth();
+  const { t } = useTranslation();
+  const [setupStatus, setSetupStatus] = React.useState<{ initialized: boolean } | null>(null);
+  const [setupLoading, setSetupLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetch('/api/auth/setup/status')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch setup status');
+        return res.json();
+      })
+      .then(data => {
+        setSetupStatus(data);
+        setSetupLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error checking setup status:', error);
+        // On error, assume initialized to show login page
+        setSetupStatus({ initialized: true });
+        setSetupLoading(false);
+      });
+  }, []);
+
+  // Show loading while checking setup status or auth
+  if (setupLoading || (loading && setupStatus?.initialized)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">{t('common.loading')}</div>
+      </div>
+    );
+  }
+
+  // Show setup page if system is not initialized
+  if (setupStatus && !setupStatus.initialized) {
     return <Setup />;
   }
 
+  // System is initialized - show normal routes
   return (
     <Routes>
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
@@ -70,6 +109,14 @@ function AppRoutes() {
         <Route path="folders" element={<Folders />} />
         <Route path="tags" element={<Tags />} />
         <Route path="profile" element={<Profile />} />
+        <Route
+          path="admin"
+          element={
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
+          }
+        />
       </Route>
     </Routes>
   );

@@ -1,8 +1,8 @@
-import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { Bookmark, Folder, Tag, User, LogOut } from 'lucide-react';
+import { Bookmark, Folder, Tag, LogOut, Settings } from 'lucide-react';
+import Button from './ui/Button';
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -10,24 +10,27 @@ export default function Layout() {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', label: t('bookmarks.title'), icon: Bookmark },
+    { path: '/bookmarks', label: t('bookmarks.title'), icon: Bookmark },
     { path: '/folders', label: t('folders.title'), icon: Folder },
     { path: '/tags', label: t('tags.title'), icon: Tag },
-    { path: '/profile', label: t('profile.title'), icon: User },
+    ...(user?.is_admin ? [{ path: '/admin', label: t('admin.title'), icon: Settings }] : []),
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      {/* Navigation */}
+      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <Link to="/" className="text-xl font-bold text-gray-900 dark:text-white">
-                  {t('app.name')}
-                </Link>
-              </div>
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo & Navigation */}
+            <div className="flex items-center gap-8">
+              <Link
+                to="/"
+                className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                {t('app.name')}
+              </Link>
+              <div className="hidden md:flex items-center gap-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.path;
@@ -35,36 +38,38 @@ export default function Layout() {
                     <Link
                       key={item.path}
                       to={item.path}
-                      className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive
-                          ? 'border-blue-500 text-gray-900 dark:text-white'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
                       }`}
                     >
-                      <Icon className="w-4 h-4 mr-2" />
+                      <Icon className="h-4 w-4" />
                       {item.label}
                     </Link>
                   );
                 })}
               </div>
             </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-700 dark:text-gray-300 mr-4">
-                {user?.name}
-              </span>
-              <button
-                onClick={logout}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+
+            {/* User Menu */}
+            <div className="flex items-center gap-4">
+              <Link
+                to="/profile"
+                className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                {t('auth.logout')}
-              </button>
+                {user?.name}
+              </Link>
+              <Button variant="ghost" size="sm" icon={LogOut} onClick={logout}>
+                <span className="hidden sm:inline">{t('auth.logout')}</span>
+              </Button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
     </div>

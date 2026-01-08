@@ -54,8 +54,9 @@ export interface CreateBookmarkInput {
   url: string;
   slug: string;
   forwarding_enabled: boolean;
-  folder_id?: string;
+  folder_ids?: string[];
   tag_ids?: string[];
+  team_ids?: string[];
 }
 
 export interface UpdateBookmarkInput {
@@ -63,6 +64,7 @@ export interface UpdateBookmarkInput {
   url?: string;
   slug?: string;
   forwarding_enabled?: boolean;
-  folder_id?: string;
+  folder_ids?: string[];
   tag_ids?: string[];
+  team_ids?: string[];
 }

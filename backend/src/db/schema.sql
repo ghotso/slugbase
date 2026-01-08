@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   name VARCHAR(255) NOT NULL,
   user_key VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255),
   is_admin BOOLEAN DEFAULT FALSE,
   oidc_sub VARCHAR(255),
   oidc_provider VARCHAR(255),
@@ -20,6 +21,8 @@ CREATE TABLE IF NOT EXISTS oidc_providers (
   client_secret TEXT NOT NULL,
   issuer_url TEXT NOT NULL,
   scopes TEXT NOT NULL,
+  auto_create_users BOOLEAN DEFAULT TRUE,
+  default_role VARCHAR(50) DEFAULT 'user',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -51,12 +54,19 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   url TEXT NOT NULL,
   slug VARCHAR(255) NOT NULL,
   forwarding_enabled BOOLEAN DEFAULT FALSE,
-  folder_id VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL,
   UNIQUE(user_id, slug)
+);
+
+-- Bookmark folders junction table (many-to-many)
+CREATE TABLE IF NOT EXISTS bookmark_folders (
+  bookmark_id VARCHAR(255) NOT NULL,
+  folder_id VARCHAR(255) NOT NULL,
+  PRIMARY KEY (bookmark_id, folder_id),
+  FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE,
+  FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 );
 
 -- Bookmark tags junction table
@@ -66,6 +76,41 @@ CREATE TABLE IF NOT EXISTS bookmark_tags (
   PRIMARY KEY (bookmark_id, tag_id),
   FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE,
   FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
+-- Teams table
+CREATE TABLE IF NOT EXISTS teams (
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) UNIQUE NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Team memberships junction table
+CREATE TABLE IF NOT EXISTS team_members (
+  user_id VARCHAR(255) NOT NULL,
+  team_id VARCHAR(255) NOT NULL,
+  PRIMARY KEY (user_id, team_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+);
+
+-- Bookmark team shares junction table
+CREATE TABLE IF NOT EXISTS bookmark_team_shares (
+  bookmark_id VARCHAR(255) NOT NULL,
+  team_id VARCHAR(255) NOT NULL,
+  PRIMARY KEY (bookmark_id, team_id),
+  FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE,
+  FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+);
+
+-- Folder team shares junction table
+CREATE TABLE IF NOT EXISTS folder_team_shares (
+  folder_id VARCHAR(255) NOT NULL,
+  team_id VARCHAR(255) NOT NULL,
+  PRIMARY KEY (folder_id, team_id),
+  FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+  FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
 -- System initialization flag
@@ -82,3 +127,11 @@ CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders(user_id);
 CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_user_key ON users(user_key);
 CREATE INDEX IF NOT EXISTS idx_users_oidc ON users(oidc_sub, oidc_provider);
+CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_team_members_team ON team_members(team_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_team_shares_bookmark ON bookmark_team_shares(bookmark_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_team_shares_team ON bookmark_team_shares(team_id);
+CREATE INDEX IF NOT EXISTS idx_folder_team_shares_folder ON folder_team_shares(folder_id);
+CREATE INDEX IF NOT EXISTS idx_folder_team_shares_team ON folder_team_shares(team_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_folders_bookmark ON bookmark_folders(bookmark_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_folders_folder ON bookmark_folders(folder_id);

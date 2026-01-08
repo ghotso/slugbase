@@ -4,12 +4,13 @@ import { AuthRequest, requireAuth } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
-router.use(requireAuth);
+router.use(requireAuth());
 
 // Get all tags for user
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const userId = req.user!.id;
+    const userId = authReq.user!.id;
     const tags = await query('SELECT * FROM tags WHERE user_id = ? ORDER BY name', [userId]);
     res.json(tags);
   } catch (error: any) {
@@ -18,9 +19,10 @@ router.get('/', async (req: AuthRequest, res) => {
 });
 
 // Get single tag
-router.get('/:id', async (req: AuthRequest, res) => {
+router.get('/:id', async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const userId = req.user!.id;
+    const userId = authReq.user!.id;
     const { id } = req.params;
 
     const tag = await queryOne('SELECT * FROM tags WHERE id = ? AND user_id = ?', [id, userId]);
@@ -34,9 +36,10 @@ router.get('/:id', async (req: AuthRequest, res) => {
 });
 
 // Create tag
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const userId = req.user!.id;
+    const userId = authReq.user!.id;
     const { name } = req.body;
 
     if (!name) {
@@ -60,9 +63,10 @@ router.post('/', async (req: AuthRequest, res) => {
 });
 
 // Update tag
-router.put('/:id', async (req: AuthRequest, res) => {
+router.put('/:id', async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const userId = req.user!.id;
+    const userId = authReq.user!.id;
     const { id } = req.params;
     const { name } = req.body;
 
@@ -90,9 +94,10 @@ router.put('/:id', async (req: AuthRequest, res) => {
 });
 
 // Delete tag
-router.delete('/:id', async (req: AuthRequest, res) => {
+router.delete('/:id', async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const userId = req.user!.id;
+    const userId = authReq.user!.id;
     const { id } = req.params;
 
     const tag = await queryOne('SELECT * FROM tags WHERE id = ? AND user_id = ?', [id, userId]);

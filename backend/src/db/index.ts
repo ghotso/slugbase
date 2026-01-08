@@ -11,6 +11,18 @@ const __dirname = dirname(__filename);
 const DB_TYPE = process.env.DB_TYPE || 'sqlite';
 let db: Database.Database | Pool;
 
+/**
+ * Convert boolean to database-compatible value
+ * SQLite needs 0/1, PostgreSQL can use true/false
+ */
+function boolToDb(value: boolean | undefined | null): number | boolean | null {
+  if (value === null || value === undefined) return null;
+  if (DB_TYPE === 'postgresql') {
+    return value;
+  }
+  return value ? 1 : 0;
+}
+
 if (DB_TYPE === 'postgresql') {
   db = new Pool({
     host: process.env.DB_HOST || 'localhost',
@@ -81,26 +93,32 @@ export async function queryOne(sql: string, params: any[] = []) {
 }
 
 export async function execute(sql: string, params: any[] = []) {
+  // Convert boolean values for SQLite compatibility
+  const processedParams = params.map(param => {
+    if (typeof param === 'boolean') {
+      return boolToDb(param);
+    }
+    return param;
+  });
+
   if (DB_TYPE === 'postgresql') {
     const pool = db as Pool;
-    const result = await pool.query(sql, params);
+    const result = await pool.query(sql, processedParams);
     return { changes: result.rowCount || 0, lastInsertRowid: null };
   } else {
     const sqlite = db as Database.Database;
-    return sqlite.prepare(sql).run(...params);
+    return sqlite.prepare(sql).run(...processedParams);
   }
 }
 
 export async function isInitialized(): Promise<boolean> {
   try {
-    if (DB_TYPE === 'postgresql') {
-      const result = await queryOne("SELECT COUNT(*) as count FROM information_schema.tables WHERE table_name = 'users'");
-      return result && parseInt((result as any).count) > 0;
-    } else {
-      const result = await queryOne("SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='users'");
-      return result && parseInt((result as any).count) > 0;
-    }
+    // Check if there are any users in the system
+    // System is initialized only after at least one user exists
+    const result = await queryOne("SELECT COUNT(*) as count FROM users", []);
+    return result && parseInt((result as any).count) > 0;
   } catch {
+    // If table doesn't exist or query fails, system is not initialized
     return false;
   }
 }

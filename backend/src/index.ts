@@ -1,18 +1,26 @@
 import express from 'express';
 import cors from 'cors';
-import session from 'express-session';
+import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { initDatabase, isInitialized } from './db/index.js';
 import { setupOIDC, loadOIDCStrategies } from './auth/oidc.js';
+import { setupJWT } from './auth/jwt.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
 import authRoutes from './routes/auth.js';
 import bookmarkRoutes from './routes/bookmarks.js';
 import folderRoutes from './routes/folders.js';
 import tagRoutes from './routes/tags.js';
 import redirectRoutes from './routes/redirect.js';
 import userRoutes from './routes/users.js';
+import teamRoutes from './routes/teams.js';
+import oidcProviderRoutes from './routes/oidc-providers.js';
+import adminUserRoutes from './routes/admin/users.js';
+import adminTeamRoutes from './routes/admin/teams.js';
+import adminSettingsRoutes from './routes/admin/settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -34,23 +42,18 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Parse cookies for JWT
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'slugbase-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-  },
-}));
-
-// Passport initialization
+// Passport initialization (JWT-based, no sessions)
 app.use(passport.initialize());
-app.use(passport.session());
-setupOIDC();
+setupJWT(); // Setup JWT strategy
+setupOIDC(); // Setup OIDC strategies
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'SlugBase API Documentation',
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -58,6 +61,11 @@ app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/oidc-providers', oidcProviderRoutes);
+app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/admin/teams', adminTeamRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
 app.use('/', redirectRoutes); // Redirect routes at root level
 
 // Health check

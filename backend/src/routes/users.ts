@@ -3,12 +3,13 @@ import { queryOne, execute } from '../db/index.js';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
-router.use(requireAuth);
+router.use(requireAuth());
 
 // Get current user profile
-router.get('/me', async (req: AuthRequest, res) => {
+router.get('/me', async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const userId = req.user!.id;
+    const userId = authReq.user!.id;
     const user = await queryOne('SELECT id, email, name, user_key, is_admin, language, theme FROM users WHERE id = ?', [userId]);
     res.json(user);
   } catch (error: any) {
@@ -17,9 +18,10 @@ router.get('/me', async (req: AuthRequest, res) => {
 });
 
 // Update user settings
-router.put('/me', async (req: AuthRequest, res) => {
+router.put('/me', async (req, res) => {
+  const authReq = req as AuthRequest;
   try {
-    const userId = req.user!.id;
+    const userId = authReq.user!.id;
     const { language, theme } = req.body;
 
     const updates: string[] = [];

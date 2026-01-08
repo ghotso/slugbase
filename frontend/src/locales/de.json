@@ -8,22 +8,34 @@
     "logout": "Abmelden",
     "loginWith": "Anmelden mit {{provider}}",
     "notAuthenticated": "Nicht authentifiziert",
-    "authFailed": "Authentifizierung fehlgeschlagen"
+    "authFailed": "Authentifizierung fehlgeschlagen",
+    "loginFailed": "Anmeldung fehlgeschlagen",
+    "noProviders": "Keine OIDC-Provider konfiguriert",
+    "noProvidersDescription": "Bitte konfigurieren Sie einen OIDC-Provider in den Administrator-Einstellungen, um die OIDC-Anmeldung zu aktivieren.",
+    "email": "E-Mail",
+    "emailPlaceholder": "ihre@email.com",
+    "password": "Passwort",
+    "passwordPlaceholder": "Geben Sie Ihr Passwort ein",
+    "or": "Oder fortfahren mit"
   },
   "setup": {
     "title": "Ersteinrichtung",
-    "description": "Willkommen bei SlugBase! Lassen Sie uns Ihren ersten OIDC-Provider konfigurieren.",
-    "providerKey": "Provider-Schlüssel",
-    "providerKeyPlaceholder": "z.B. google, github",
-    "clientId": "Client-ID",
-    "clientSecret": "Client-Geheimnis",
-    "issuerUrl": "Issuer-URL",
-    "scopes": "Bereiche",
-    "scopesPlaceholder": "openid profile email",
-    "submit": "Einrichtung abschließen",
+    "description": "Willkommen bei SlugBase! Erstellen Sie Ihren ersten Administrator-Benutzer, um zu beginnen.",
+    "email": "E-Mail",
+    "emailPlaceholder": "admin@example.com",
+    "name": "Name",
+    "namePlaceholder": "Administrator",
+    "password": "Passwort",
+    "passwordPlaceholder": "Mindestens 8 Zeichen",
+    "confirmPassword": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Geben Sie Ihr Passwort erneut ein",
+    "passwordMismatch": "Passwörter stimmen nicht überein",
+    "passwordTooShort": "Passwort muss mindestens 8 Zeichen lang sein",
+    "adminNote": "Dieser Benutzer wird als Administrator erstellt. Sie können OIDC-Provider später in den Administrator-Einstellungen konfigurieren.",
+    "submit": "Administrator erstellen",
     "alreadyInitialized": "System bereits initialisiert",
     "success": "Einrichtung erfolgreich abgeschlossen!",
-    "redirecting": "Weiterleitung..."
+    "redirecting": "Weiterleitung zur Anmeldung..."
   },
   "bookmarks": {
     "title": "Lesezeichen",
@@ -49,7 +61,12 @@
     "filterByTag": "Nach Tag filtern",
     "allFolders": "Alle Ordner",
     "allTags": "Alle Tags",
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "shareWithTeams": "Mit Teams teilen",
+    "shareWithTeamsDescription": "Wählen Sie Teams aus, mit denen Sie dieses Lesezeichen teilen möchten. Alle Mitglieder der ausgewählten Teams können dieses Lesezeichen anzeigen.",
+    "shared": "Geteilt",
+    "sharedWithTeam": "Mit Team geteilt",
+    "teams": "Teams"
   },
   "folders": {
     "title": "Ordner",
@@ -58,7 +75,10 @@
     "delete": "Ordner löschen",
     "name": "Ordnername",
     "empty": "Noch keine Ordner",
-    "deleteConfirm": "Möchten Sie diesen Ordner wirklich löschen?"
+    "deleteConfirm": "Möchten Sie diesen Ordner wirklich löschen?",
+    "shareWithTeams": "Mit Teams teilen",
+    "shareWithTeamsDescription": "Wählen Sie Teams aus, mit denen Sie diesen Ordner teilen möchten. Alle Lesezeichen in diesem Ordner werden mit den ausgewählten Teams geteilt.",
+    "shared": "Geteilt"
   },
   "tags": {
     "title": "Tags",
@@ -71,6 +91,7 @@
   },
   "profile": {
     "title": "Profil",
+    "description": "Verwalten Sie Ihre Kontoeinstellungen und Präferenzen",
     "userKey": "Benutzerschlüssel",
     "email": "E-Mail",
     "name": "Name",
@@ -93,11 +114,57 @@
     "edit": "Bearbeiten",
     "create": "Erstellen",
     "save": "Speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "yes": "Ja",
+    "no": "Nein",
+    "view": "Ansehen"
   },
   "dashboard": {
     "bookmarksDescription": "Verwalten Sie Ihre Lesezeichen",
     "foldersDescription": "Organisieren Sie mit Ordnern",
     "tagsDescription": "Markieren Sie Ihre Lesezeichen"
+  },
+  "apiDocs": {
+    "title": "API-Dokumentation",
+    "description": "Vollständige API-Referenz für SlugBase. Alle Endpunkte erfordern eine Authentifizierung über JWT-Token, außer wo anders angegeben."
+  },
+  "admin": {
+    "title": "Administration",
+    "description": "Verwalten Sie Benutzer, Gruppen, OIDC-Provider und Systemeinstellungen",
+    "users": "Benutzer",
+    "teams": "Teams",
+    "userGroups": "Teams",
+    "oidcProviders": "OIDC-Provider",
+    "settings": "Einstellungen",
+    "addUser": "Benutzer hinzufügen",
+    "editUser": "Benutzer bearbeiten",
+    "addTeam": "Team hinzufügen",
+    "editTeam": "Team bearbeiten",
+    "addGroup": "Team hinzufügen",
+    "editGroup": "Team bearbeiten",
+    "addProvider": "Provider hinzufügen",
+    "editProvider": "Provider bearbeiten",
+    "addSetting": "Einstellung hinzufügen",
+    "admin": "Administrator",
+    "user": "Benutzer",
+    "oidcUser": "OIDC-Benutzer",
+    "teamName": "Teamname",
+    "groupName": "Teamname",
+    "description": "Beschreibung",
+    "providerKey": "Provider-Schlüssel",
+    "issuerUrl": "Issuer-URL",
+    "clientId": "Client-ID",
+    "clientSecret": "Client-Geheimnis",
+    "scopes": "Berechtigungen",
+    "autoCreate": "Benutzer automatisch erstellen",
+    "defaultRole": "Standardrolle",
+    "settingKey": "Schlüssel",
+    "settingValue": "Wert",
+    "leaveBlank": "Leer lassen, um aktuellen Wert beizubehalten",
+    "confirmDeleteUser": "Möchten Sie diesen Benutzer wirklich löschen?",
+    "confirmDeleteTeam": "Möchten Sie dieses Team wirklich löschen?",
+    "confirmDeleteGroup": "Möchten Sie dieses Team wirklich löschen?",
+    "confirmDeleteProvider": "Möchten Sie diesen Provider wirklich löschen?",
+    "confirmDeleteSetting": "Möchten Sie diese Einstellung wirklich löschen?"
   }
 }
