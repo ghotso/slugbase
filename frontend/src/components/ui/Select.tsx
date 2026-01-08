@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import FolderIcon from '../FolderIcon';
 
 interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
+  icon?: string | null;
 }
 
 interface SelectProps {
@@ -59,7 +61,10 @@ export default function Select({
           transition-colors
         `}
       >
-        <span className={selectedOption ? '' : 'text-gray-500 dark:text-gray-400'}>
+        <span className={`flex items-center gap-2 ${selectedOption ? '' : 'text-gray-500 dark:text-gray-400'}`}>
+          {selectedOption?.icon && (
+            <FolderIcon iconName={selectedOption.icon} size={16} className="text-gray-600 dark:text-gray-400" />
+          )}
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
@@ -98,7 +103,12 @@ export default function Select({
                     ${option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   `}
                 >
-                  <span>{option.label}</span>
+                  <span className="flex items-center gap-2">
+                    {option.icon && (
+                      <FolderIcon iconName={option.icon} size={16} className="text-gray-600 dark:text-gray-400" />
+                    )}
+                    {option.label}
+                  </span>
                   {value === option.value && <Check className="h-4 w-4" />}
                 </button>
               ))

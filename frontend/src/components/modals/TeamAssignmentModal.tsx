@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { UserPlus, X, Users, User } from 'lucide-react';
+import { UserPlus, X, Users, User, Search } from 'lucide-react';
 
 interface Team {
   id: string;
@@ -46,9 +46,11 @@ export default function TeamAssignmentModal({
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (isOpen) {
+      setSearchQuery(''); // Reset search when modal opens
       loadData();
     }
   }, [isOpen, mode, userId, teamId]);
@@ -84,6 +86,7 @@ export default function TeamAssignmentModal({
     try {
       setSaving(true);
       await api.post(`/admin/teams/${teamIdToAdd}/members`, { user_id: userIdToAdd });
+      setSearchQuery(''); // Reset search after adding
       await loadData();
       onSuccess();
     } catch (error: any) {
@@ -97,6 +100,7 @@ export default function TeamAssignmentModal({
     try {
       setSaving(true);
       await api.delete(`/admin/teams/${teamIdToRemove}/members/${userIdToRemove}`);
+      setSearchQuery(''); // Reset search after removing
       await loadData();
       onSuccess();
     } catch (error: any) {
@@ -106,9 +110,30 @@ export default function TeamAssignmentModal({
     }
   }
 
+  // Filter function for search
+  const filterTeams = (teams: Team[]) => {
+    if (!searchQuery.trim()) return teams;
+    const query = searchQuery.toLowerCase();
+    return teams.filter(
+      (team) =>
+        team.name.toLowerCase().includes(query) ||
+        (team.description && team.description.toLowerCase().includes(query))
+    );
+  };
+
+  const filterUsers = (users: User[]) => {
+    if (!searchQuery.trim()) return users;
+    const query = searchQuery.toLowerCase();
+    return users.filter(
+      (user) =>
+        user.name.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query)
+    );
+  };
+
   if (mode === 'user') {
     const userTeamIds = new Set(userTeams.map((t) => t.id));
-    const availableTeams = allTeams.filter((t) => !userTeamIds.has(t.id));
+    const availableTeams = filterTeams(allTeams.filter((t) => !userTeamIds.has(t.id)));
 
     return (
       <Modal
@@ -162,12 +187,30 @@ export default function TeamAssignmentModal({
             </div>
 
             {/* Available Teams */}
-            {availableTeams.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  {t('admin.addTeams')} ({availableTeams.length})
-                </h3>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                {t('admin.addTeams')} ({availableTeams.length})
+              </h3>
+              <div className="mb-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={t('admin.searchTeams')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              {availableTeams.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                  {allTeams.filter((t) => !userTeamIds.has(t.id)).length === 0
+                    ? t('admin.noTeamsAvailable')
+                    : t('admin.noSearchResults')}
+                </p>
+              ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {availableTeams.map((team) => (
                     <div
@@ -194,8 +237,8 @@ export default function TeamAssignmentModal({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button variant="secondary" onClick={onClose}>
@@ -209,7 +252,7 @@ export default function TeamAssignmentModal({
   } else {
     // mode === 'team'
     const memberIds = new Set(teamMembers.map((m) => m.id));
-    const availableUsers = allUsers.filter((u) => !memberIds.has(u.id));
+    const availableUsers = filterUsers(allUsers.filter((u) => !memberIds.has(u.id)));
 
     return (
       <Modal
@@ -261,12 +304,30 @@ export default function TeamAssignmentModal({
             </div>
 
             {/* Available Users */}
-            {availableUsers.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  {t('admin.addMembers')} ({availableUsers.length})
-                </h3>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                {t('admin.addMembers')} ({availableUsers.length})
+              </h3>
+              <div className="mb-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={t('admin.searchUsers')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              {availableUsers.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+                  {allUsers.filter((u) => !memberIds.has(u.id)).length === 0
+                    ? t('admin.noUsersAvailable')
+                    : t('admin.noSearchResults')}
+                </p>
+              ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {availableUsers.map((user) => (
                     <div
@@ -291,8 +352,8 @@ export default function TeamAssignmentModal({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
               <Button variant="secondary" onClick={onClose}>

@@ -92,38 +92,43 @@ export default function Tags() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all overflow-hidden"
+              className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all"
             >
-              <div className="p-5 space-y-4">
-                {/* Header */}
-                <div className="flex items-center gap-2">
-                  <TagIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {tag.name}
-                  </h3>
+              <div className="p-4 space-y-3">
+                {/* Header with icon */}
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                    <TagIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                      {tag.name}
+                    </h3>
+                  </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                {/* Actions - minimal */}
+                <div className="flex gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
                   <Button
                     variant="ghost"
                     size="sm"
                     icon={Edit}
                     onClick={() => handleEdit(tag)}
-                    className="flex-1"
+                    className="flex-1 text-xs"
                   >
                     {t('common.edit')}
                   </Button>
                   <Button
-                    variant="danger"
+                    variant="ghost"
                     size="sm"
                     icon={Trash2}
                     onClick={() => handleDelete(tag.id)}
                     title={t('common.delete')}
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                   />
                 </div>
               </div>

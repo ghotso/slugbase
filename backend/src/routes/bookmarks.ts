@@ -7,6 +7,91 @@ import { CreateBookmarkInput, UpdateBookmarkInput } from '../types.js';
 const router = Router();
 router.use(requireAuth());
 
+/**
+ * @swagger
+ * /api/bookmarks:
+ *   get:
+ *     summary: Get all bookmarks
+ *     description: Returns all bookmarks for the authenticated user, including own bookmarks and bookmarks shared via teams or users. Supports filtering by folder and tag.
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: folder_id
+ *         schema:
+ *           type: string
+ *         description: Filter bookmarks by folder ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *       - in: query
+ *         name: tag_id
+ *         schema:
+ *           type: string
+ *         description: Filter bookmarks by tag ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: List of bookmarks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     example: "123e4567-e89b-12d3-a456-426614174000"
+ *                   title:
+ *                     type: string
+ *                     example: "Example Bookmark"
+ *                   url:
+ *                     type: string
+ *                     example: "https://example.com"
+ *                   slug:
+ *                     type: string
+ *                     nullable: true
+ *                     example: "example-slug"
+ *                   forwarding_enabled:
+ *                     type: boolean
+ *                     example: true
+ *                   bookmark_type:
+ *                     type: string
+ *                     enum: [own, shared]
+ *                     example: "own"
+ *                   folders:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         icon:
+ *                           type: string
+ *                           nullable: true
+ *                   tags:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                   shared_teams:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                   shared_users:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *       401:
+ *         description: Unauthorized
+ */
 // Get all bookmarks for user (including shared bookmarks)
 router.get('/', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -21,19 +106,23 @@ router.get('/', async (req, res) => {
     );
     const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
 
-    // Build query for own bookmarks + shared bookmarks (directly shared or via shared folders)
+    // Build query for own bookmarks + shared bookmarks (directly shared with user, teams, or via shared folders)
     let sql = `
       SELECT DISTINCT b.*,
              CASE WHEN b.user_id = ? THEN 'own' ELSE 'shared' END as bookmark_type
       FROM bookmarks b
+      LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
       LEFT JOIN bookmark_folders bf ON b.id = bf.bookmark_id
+      LEFT JOIN folder_user_shares fus ON bf.folder_id = fus.folder_id
       LEFT JOIN folder_team_shares fts ON bf.folder_id = fts.folder_id
       WHERE (b.user_id = ? 
+        OR bus.user_id = ?
         OR (bts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND bts.team_id IS NOT NULL)
+        OR (fus.user_id = ?)
         OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL AND bf.folder_id IS NOT NULL))
     `;
-    const params: any[] = [userId, userId];
+    const params: any[] = [userId, userId, userId, userId];
     if (teamIds.length > 0) {
       params.push(...teamIds);
       params.push(...teamIds); // Second set for folder shares
@@ -59,6 +148,22 @@ router.get('/', async (req, res) => {
 
     // Get tags, folders, and teams for each bookmark
     for (const bookmark of bookmarks as any[]) {
+      // Convert boolean fields from SQLite (0/1) to boolean
+      bookmark.forwarding_enabled = Boolean(bookmark.forwarding_enabled);
+      // Convert null slug or internal placeholder to empty string for frontend
+      if (!bookmark.slug || bookmark.slug.startsWith('_internal_')) {
+        bookmark.slug = '';
+      }
+      
+      // Get owner info for shared bookmarks
+      if (bookmark.user_id !== userId) {
+        const owner = await queryOne('SELECT id, name, email FROM users WHERE id = ?', [bookmark.user_id]);
+        if (owner) {
+          bookmark.user_name = owner.name;
+          bookmark.user_email = owner.email;
+        }
+      }
+      
       const tags = await query(
         `SELECT t.* FROM tags t
          INNER JOIN bookmark_tags bt ON t.id = bt.tag_id
@@ -67,9 +172,9 @@ router.get('/', async (req, res) => {
       );
       bookmark.tags = tags;
       
-      // Get folders for this bookmark
+      // Get folders for this bookmark (including icon)
       const bookmarkFolders = await query(
-        `SELECT f.* FROM folders f
+        `SELECT f.id, f.name, f.icon FROM folders f
          INNER JOIN bookmark_folders bf ON f.id = bf.folder_id
          WHERE bf.bookmark_id = ?`,
         [bookmark.id]
@@ -84,6 +189,15 @@ router.get('/', async (req, res) => {
         [bookmark.id]
       );
       bookmark.shared_teams = Array.isArray(sharedTeams) ? sharedTeams : (sharedTeams ? [sharedTeams] : []);
+      
+      // Get shared users for this bookmark
+      const sharedUsers = await query(
+        `SELECT u.id, u.name, u.email FROM users u
+         INNER JOIN bookmark_user_shares bus ON u.id = bus.user_id
+         WHERE bus.bookmark_id = ?`,
+        [bookmark.id]
+      );
+      bookmark.shared_users = Array.isArray(sharedUsers) ? sharedUsers : (sharedUsers ? [sharedUsers] : []);
     }
 
     res.json(bookmarks);
@@ -92,6 +206,56 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/bookmarks/{id}:
+ *   get:
+ *     summary: Get bookmark by ID
+ *     description: Returns a single bookmark by ID. User must own the bookmark or have access via sharing.
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bookmark ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Bookmark details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 url:
+ *                   type: string
+ *                 slug:
+ *                   type: string
+ *                   nullable: true
+ *                 forwarding_enabled:
+ *                   type: boolean
+ *                 folders:
+ *                   type: array
+ *                 tags:
+ *                   type: array
+ *                 shared_teams:
+ *                   type: array
+ *                 shared_users:
+ *                   type: array
+ *       404:
+ *         description: Bookmark not found
+ *       401:
+ *         description: Unauthorized
+ */
 // Get single bookmark (own or shared)
 router.get('/:id', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -106,18 +270,22 @@ router.get('/:id', async (req, res) => {
     );
     const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
 
-    // Check if bookmark is owned by user or shared with user's teams (directly or via folder)
+    // Check if bookmark is owned by user or shared with user (directly, via teams, or via folder)
     let sql = `
       SELECT DISTINCT b.*
       FROM bookmarks b
+      LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
       LEFT JOIN bookmark_folders bf ON b.id = bf.bookmark_id
+      LEFT JOIN folder_user_shares fus ON bf.folder_id = fus.folder_id
       LEFT JOIN folder_team_shares fts ON bf.folder_id = fts.folder_id
-      WHERE b.id = ? AND (b.user_id = ? 
+      WHERE b.id = ? AND (b.user_id = ?
+        OR bus.user_id = ?
         OR (bts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND bts.team_id IS NOT NULL)
+        OR fus.user_id = ?
         OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL AND bf.folder_id IS NOT NULL))
     `;
-    const params: any[] = [id, userId];
+    const params: any[] = [id, userId, userId, userId];
     if (teamIds.length > 0) {
       params.push(...teamIds);
       params.push(...teamIds); // Second set for folder shares
@@ -129,6 +297,13 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Bookmark not found' });
     }
 
+    // Convert boolean fields from SQLite (0/1) to boolean
+    bookmark.forwarding_enabled = Boolean(bookmark.forwarding_enabled);
+    // Convert null slug to empty string for frontend
+    if (!bookmark.slug) {
+      bookmark.slug = '';
+    }
+
     const tags = await query(
       `SELECT t.* FROM tags t
        INNER JOIN bookmark_tags bt ON t.id = bt.tag_id
@@ -136,9 +311,9 @@ router.get('/:id', async (req, res) => {
       [id]
     );
 
-    // Get folders for this bookmark
+    // Get folders for this bookmark (including icon)
     const bookmarkFolders = await query(
-      `SELECT f.* FROM folders f
+      `SELECT f.id, f.name, f.icon FROM folders f
        INNER JOIN bookmark_folders bf ON f.id = bf.folder_id
        WHERE bf.bookmark_id = ?`,
       [id]
@@ -152,9 +327,18 @@ router.get('/:id', async (req, res) => {
       [id]
     );
 
+    // Get shared users for this bookmark
+    const sharedUsers = await query(
+      `SELECT u.id, u.name, u.email FROM users u
+       INNER JOIN bookmark_user_shares bus ON u.id = bus.user_id
+       WHERE bus.bookmark_id = ?`,
+      [id]
+    );
+
     (bookmark as any).tags = tags;
     (bookmark as any).folders = Array.isArray(bookmarkFolders) ? bookmarkFolders : (bookmarkFolders ? [bookmarkFolders] : []);
     (bookmark as any).shared_teams = Array.isArray(sharedTeams) ? sharedTeams : (sharedTeams ? [sharedTeams] : []);
+    (bookmark as any).shared_users = Array.isArray(sharedUsers) ? sharedUsers : (sharedUsers ? [sharedUsers] : []);
 
     res.json(bookmark);
   } catch (error: any) {
@@ -162,6 +346,97 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/bookmarks:
+ *   post:
+ *     summary: Create a new bookmark
+ *     description: Creates a new bookmark. Slug is required only if forwarding is enabled. Can assign to multiple folders, tags, and share with users/teams.
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - url
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: "Example Bookmark"
+ *               url:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://example.com"
+ *               slug:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Required if forwarding_enabled is true, optional otherwise
+ *                 example: "example-slug"
+ *               forwarding_enabled:
+ *                 type: boolean
+ *                 default: false
+ *                 example: true
+ *               folder_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of folder IDs to assign bookmark to
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000"]
+ *               tag_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of tag IDs to assign to bookmark
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000"]
+ *               team_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of team IDs to share bookmark with
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000"]
+ *               user_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of user IDs to share bookmark with
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000"]
+ *               share_all_teams:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Share bookmark with all teams user is a member of
+ *                 example: false
+ *     responses:
+ *       201:
+ *         description: Bookmark created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 url:
+ *                   type: string
+ *                 slug:
+ *                   type: string
+ *                   nullable: true
+ *                 forwarding_enabled:
+ *                   type: boolean
+ *       400:
+ *         description: Missing required fields, slug required when forwarding enabled, or slug already exists
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: User does not own folder or is not member of team
+ */
 // Create bookmark
 router.post('/', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -169,25 +444,35 @@ router.post('/', async (req, res) => {
     const userId = authReq.user!.id;
     const data: CreateBookmarkInput = req.body;
 
-    if (!data.title || !data.url || !data.slug) {
+    if (!data.title || !data.url) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Check if slug is unique for user
-    const existing = await queryOne(
-      'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ?',
-      [userId, data.slug]
-    );
+    // Slug is required only if forwarding is enabled
+    if (data.forwarding_enabled && !data.slug) {
+      return res.status(400).json({ error: 'Slug is required when forwarding is enabled' });
+    }
 
-    if (existing) {
-      return res.status(400).json({ error: 'Slug already exists' });
+    // Slug can be null/empty if forwarding is disabled
+    const slug = data.slug && data.slug.trim() ? data.slug.trim() : null;
+    
+    // Check if slug is unique for user (only if provided)
+    if (slug) {
+      const existing = await queryOne(
+        'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ?',
+        [userId, slug]
+      );
+
+      if (existing) {
+        return res.status(400).json({ error: 'Slug already exists for this user' });
+      }
     }
 
     const bookmarkId = uuidv4();
     await execute(
       `INSERT INTO bookmarks (id, user_id, title, url, slug, forwarding_enabled)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [bookmarkId, userId, data.title, data.url, data.slug, data.forwarding_enabled || false]
+      [bookmarkId, userId, data.title, data.url, slug, data.forwarding_enabled || false]
     );
 
     // Add folders
@@ -216,7 +501,20 @@ router.post('/', async (req, res) => {
     }
 
     // Add team shares
-    if (data.team_ids && data.team_ids.length > 0) {
+    if (data.share_all_teams) {
+      // Share with all teams user is a member of
+      const userTeams = await query(
+        'SELECT team_id FROM team_members WHERE user_id = ?',
+        [userId]
+      );
+      const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
+      for (const teamId of teamIds) {
+        await execute(
+          'INSERT INTO bookmark_team_shares (bookmark_id, team_id) VALUES (?, ?)',
+          [bookmarkId, teamId]
+        );
+      }
+    } else if (data.team_ids && data.team_ids.length > 0) {
       // Verify user is member of all teams
       for (const teamId of data.team_ids) {
         const isMember = await queryOne(
@@ -233,13 +531,111 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Add user shares
+    if (data.user_ids && data.user_ids.length > 0) {
+      // Don't allow sharing with self
+      const filteredUserIds = data.user_ids.filter((uid) => uid !== userId);
+      for (const shareUserId of filteredUserIds) {
+        // Verify user exists
+        const user = await queryOne('SELECT id FROM users WHERE id = ?', [shareUserId]);
+        if (!user) {
+          return res.status(404).json({ error: `User ${shareUserId} not found` });
+        }
+        await execute(
+          'INSERT INTO bookmark_user_shares (bookmark_id, user_id) VALUES (?, ?)',
+          [bookmarkId, shareUserId]
+        );
+      }
+    }
+
     const bookmark = await queryOne('SELECT * FROM bookmarks WHERE id = ?', [bookmarkId]);
+    // Convert boolean fields from SQLite (0/1) to boolean
+    bookmark.forwarding_enabled = Boolean(bookmark.forwarding_enabled);
+    // Return null as empty string for frontend
+    if (!bookmark.slug) {
+      bookmark.slug = '';
+    }
     res.status(201).json(bookmark);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
+/**
+ * @swagger
+ * /api/bookmarks/{id}:
+ *   put:
+ *     summary: Update bookmark
+ *     description: Updates an existing bookmark. User must own the bookmark. All fields are optional.
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bookmark ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: "Updated Bookmark Title"
+ *               url:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://updated-example.com"
+ *               slug:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Required if forwarding_enabled is true
+ *                 example: "updated-slug"
+ *               forwarding_enabled:
+ *                 type: boolean
+ *                 example: true
+ *               folder_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of folder IDs (replaces existing assignments)
+ *               tag_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of tag IDs (replaces existing assignments)
+ *               team_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of team IDs to share with (replaces existing shares)
+ *               user_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of user IDs to share with (replaces existing shares)
+ *               share_all_teams:
+ *                 type: boolean
+ *                 description: Share with all teams user is a member of
+ *     responses:
+ *       200:
+ *         description: Bookmark updated successfully
+ *       400:
+ *         description: Slug required when forwarding enabled or slug already exists
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: User does not own folder or is not member of team
+ *       404:
+ *         description: Bookmark not found
+ */
 // Update bookmark
 router.put('/:id', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -254,14 +650,23 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Bookmark not found' });
     }
 
+    // Slug validation
+    if (data.forwarding_enabled && !data.slug) {
+      return res.status(400).json({ error: 'Slug is required when forwarding is enabled' });
+    }
+
     // Check slug uniqueness if changed
-    if (data.slug && data.slug !== (existing as any).slug) {
-      const slugExists = await queryOne(
-        'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ? AND id != ?',
-        [userId, data.slug, id]
-      );
-      if (slugExists) {
-        return res.status(400).json({ error: 'Slug already exists' });
+    if (data.slug !== undefined && data.slug !== (existing as any).slug) {
+      // If slug is being set/changed, check uniqueness (only if slug is provided)
+      const newSlug = data.slug && data.slug.trim() ? data.slug.trim() : null;
+      if (newSlug) {
+        const slugExists = await queryOne(
+          'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ? AND id != ?',
+          [userId, newSlug, id]
+        );
+        if (slugExists) {
+          return res.status(400).json({ error: 'Slug already exists for this user' });
+        }
       }
     }
 
@@ -278,8 +683,10 @@ router.put('/:id', async (req, res) => {
       params.push(data.url);
     }
     if (data.slug !== undefined) {
+      // Store null if slug is empty/whitespace, otherwise store the trimmed slug
+      const dbSlug = data.slug && data.slug.trim() ? data.slug.trim() : null;
       updates.push('slug = ?');
-      params.push(data.slug);
+      params.push(dbSlug);
     }
     if (data.forwarding_enabled !== undefined) {
       updates.push('forwarding_enabled = ?');
@@ -321,9 +728,22 @@ router.put('/:id', async (req, res) => {
     }
 
     // Update team shares if provided
-    if (data.team_ids !== undefined) {
+    if (data.share_all_teams !== undefined || data.team_ids !== undefined) {
       await execute('DELETE FROM bookmark_team_shares WHERE bookmark_id = ?', [id]);
-      if (data.team_ids.length > 0) {
+      if (data.share_all_teams) {
+        // Share with all teams user is a member of
+        const userTeams = await query(
+          'SELECT team_id FROM team_members WHERE user_id = ?',
+          [userId]
+        );
+        const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
+        for (const teamId of teamIds) {
+          await execute(
+            'INSERT INTO bookmark_team_shares (bookmark_id, team_id) VALUES (?, ?)',
+            [id, teamId]
+          );
+        }
+      } else if (data.team_ids && data.team_ids.length > 0) {
         // Verify user is member of all teams
         for (const teamId of data.team_ids) {
           const isMember = await queryOne(
@@ -341,13 +761,73 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Update user shares if provided
+    if (data.user_ids !== undefined) {
+      await execute('DELETE FROM bookmark_user_shares WHERE bookmark_id = ?', [id]);
+      if (data.user_ids.length > 0) {
+        // Don't allow sharing with self
+        const filteredUserIds = data.user_ids.filter((uid) => uid !== userId);
+        for (const shareUserId of filteredUserIds) {
+          // Verify user exists
+          const user = await queryOne('SELECT id FROM users WHERE id = ?', [shareUserId]);
+          if (!user) {
+            return res.status(404).json({ error: `User ${shareUserId} not found` });
+          }
+          await execute(
+            'INSERT INTO bookmark_user_shares (bookmark_id, user_id) VALUES (?, ?)',
+            [id, shareUserId]
+          );
+        }
+      }
+    }
+
     const bookmark = await queryOne('SELECT * FROM bookmarks WHERE id = ?', [id]);
+    // Convert boolean fields from SQLite (0/1) to boolean
+    bookmark.forwarding_enabled = Boolean(bookmark.forwarding_enabled);
+    // Return null as empty string for frontend
+    if (!bookmark.slug) {
+      bookmark.slug = '';
+    }
     res.json(bookmark);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
+/**
+ * @swagger
+ * /api/bookmarks/{id}:
+ *   delete:
+ *     summary: Delete bookmark
+ *     description: Deletes a bookmark. User must own the bookmark.
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bookmark ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Bookmark deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Bookmark deleted"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Bookmark not found
+ */
 // Delete bookmark
 router.delete('/:id', async (req, res) => {
   const authReq = req as AuthRequest;

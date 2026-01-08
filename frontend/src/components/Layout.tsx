@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { Bookmark, Folder, Tag, LogOut, Settings } from 'lucide-react';
+import { Bookmark, Folder, Tag, LogOut, Settings, Share2 } from 'lucide-react';
 import Button from './ui/Button';
 
 export default function Layout() {
@@ -13,6 +13,7 @@ export default function Layout() {
     { path: '/bookmarks', label: t('bookmarks.title'), icon: Bookmark },
     { path: '/folders', label: t('folders.title'), icon: Folder },
     { path: '/tags', label: t('tags.title'), icon: Tag },
+    { path: '/shared', label: t('shared.title'), icon: Share2 },
     ...(user?.is_admin ? [{ path: '/admin', label: t('admin.title'), icon: Settings }] : []),
   ];
 

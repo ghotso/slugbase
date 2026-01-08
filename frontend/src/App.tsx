@@ -10,6 +10,7 @@ import Folders from './pages/Folders';
 import Tags from './pages/Tags';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import Shared from './pages/Shared';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -108,6 +109,7 @@ function AppRoutes() {
         <Route path="bookmarks" element={<Bookmarks />} />
         <Route path="folders" element={<Folders />} />
         <Route path="tags" element={<Tags />} />
+        <Route path="shared" element={<Shared />} />
         <Route path="profile" element={<Profile />} />
         <Route
           path="admin"

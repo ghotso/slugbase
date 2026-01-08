@@ -5,7 +5,8 @@ import api from '../../api/client';
 import Modal from '../ui/Modal';
 import Autocomplete from '../ui/Autocomplete';
 import Button from '../ui/Button';
-import { Users } from 'lucide-react';
+import SharingModal from './SharingModal';
+import { Share2 } from 'lucide-react';
 
 interface Bookmark {
   id: string;
@@ -47,20 +48,25 @@ export default function BookmarkModal({
     folder_ids: [] as string[],
     tag_ids: [] as string[],
     team_ids: [] as string[],
+    user_ids: [] as string[],
+    share_all_teams: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sharingModalOpen, setSharingModalOpen] = useState(false);
 
   useEffect(() => {
     if (bookmark) {
       setFormData({
         title: bookmark.title,
         url: bookmark.url,
-        slug: bookmark.slug,
+        slug: (bookmark.slug && !bookmark.slug.startsWith('_internal_')) ? bookmark.slug : '',
         forwarding_enabled: bookmark.forwarding_enabled,
         folder_ids: (bookmark as any).folders?.map((f: any) => f.id) || [],
         tag_ids: bookmark.tags?.map((t) => t.id) || [],
         team_ids: bookmark.shared_teams?.map((t) => t.id) || [],
+        user_ids: (bookmark as any).shared_users?.map((u: any) => u.id) || [],
+        share_all_teams: (bookmark as any).share_all_teams || false,
       });
     } else {
       setFormData({
@@ -71,6 +77,8 @@ export default function BookmarkModal({
         folder_ids: [],
         tag_ids: [],
         team_ids: [],
+        user_ids: [],
+        share_all_teams: false,
       });
     }
   }, [bookmark, isOpen]);
@@ -81,11 +89,37 @@ export default function BookmarkModal({
     setError('');
 
     try {
-      const payload = {
-        ...formData,
-        tag_ids: formData.tag_ids,
-        team_ids: formData.team_ids,
+      const payload: any = {
+        title: formData.title,
+        url: formData.url,
+        forwarding_enabled: formData.forwarding_enabled,
+        folder_ids: formData.folder_ids.length > 0 ? formData.folder_ids : undefined,
+        tag_ids: formData.tag_ids.length > 0 ? formData.tag_ids : undefined,
+        team_ids: formData.team_ids.length > 0 ? formData.team_ids : undefined,
+        user_ids: formData.user_ids.length > 0 ? formData.user_ids : undefined,
+        share_all_teams: formData.share_all_teams || undefined,
       };
+      
+      // Only include slug if forwarding is enabled (required) or if user provided one (optional when forwarding disabled)
+      if (formData.forwarding_enabled) {
+        if (!formData.slug || !formData.slug.trim()) {
+          setError(t('bookmarks.slugRequired'));
+          setLoading(false);
+          return;
+        }
+        payload.slug = formData.slug.trim();
+      } else {
+        // When forwarding is disabled, always send slug (empty string will be converted to NULL on backend)
+        // This ensures we clear any existing slug when forwarding is disabled
+        payload.slug = formData.slug && formData.slug.trim() ? formData.slug.trim() : '';
+      }
+      
+      // Remove undefined values
+      Object.keys(payload).forEach(key => {
+        if (payload[key] === undefined) {
+          delete payload[key];
+        }
+      });
       if (bookmark) {
         await api.put(`/bookmarks/${bookmark.id}`, payload);
       } else {
@@ -93,7 +127,12 @@ export default function BookmarkModal({
       }
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || t('common.error'));
+      const errorMessage = err.response?.data?.error || t('common.error');
+      setError(errorMessage);
+      // If it's a slug uniqueness error, highlight the slug field
+      if (errorMessage.includes('Slug already exists')) {
+        // Error is already set, user will see it
+      }
     } finally {
       setLoading(false);
     }
@@ -177,7 +216,7 @@ export default function BookmarkModal({
               type="text"
               required
               className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              value={formData.slug}
+              value={formData.slug || ''}
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
             />
           </div>
@@ -191,9 +230,12 @@ export default function BookmarkModal({
             <input
               type="text"
               className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              value={formData.slug}
+              value={formData.slug || ''}
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
             />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t('bookmarks.slugOptionalHint')}
+            </p>
           </div>
         )}
 
@@ -209,32 +251,40 @@ export default function BookmarkModal({
           <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
             {t('bookmarks.folders')}
           </label>
-          <div className="flex flex-wrap gap-2">
-            {folders.map((folder) => (
-              <button
-                key={folder.id}
-                type="button"
-                onClick={() => {
-                  setFormData({
-                    ...formData,
-                    folder_ids: formData.folder_ids.includes(folder.id)
-                      ? formData.folder_ids.filter((id) => id !== folder.id)
-                      : [...formData.folder_ids, folder.id],
-                  });
-                }}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  formData.folder_ids.includes(folder.id)
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                {folder.name}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {t('bookmarks.foldersDescription')}
-          </p>
+          {folders.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {folders.map((folder) => (
+                  <button
+                    key={folder.id}
+                    type="button"
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        folder_ids: formData.folder_ids.includes(folder.id)
+                          ? formData.folder_ids.filter((id) => id !== folder.id)
+                          : [...formData.folder_ids, folder.id],
+                      });
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      formData.folder_ids.includes(folder.id)
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {folder.name}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {t('bookmarks.foldersDescription')}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('bookmarks.noFoldersAvailable')}
+            </p>
+          )}
         </div>
 
         <div>
@@ -250,40 +300,24 @@ export default function BookmarkModal({
           />
         </div>
 
-        {teams.length > 0 && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-              <Users className="inline h-4 w-4 mr-1.5" />
-              {t('bookmarks.shareWithTeams')}
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {teams.map((team) => (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => {
-                    setFormData({
-                      ...formData,
-                      team_ids: formData.team_ids.includes(team.id)
-                        ? formData.team_ids.filter((id) => id !== team.id)
-                        : [...formData.team_ids, team.id],
-                    });
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    formData.team_ids.includes(team.id)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {team.name}
-                </button>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {t('bookmarks.shareWithTeamsDescription')}
-            </p>
-          </div>
-        )}
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+            <Share2 className="inline h-4 w-4 mr-1.5" />
+            {t('bookmarks.shareWithTeams')}
+          </label>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setSharingModalOpen(true)}
+            className="w-full"
+          >
+            {formData.share_all_teams
+              ? t('bookmarks.shareAllTeams')
+              : formData.team_ids.length > 0 || formData.user_ids.length > 0
+              ? `${formData.team_ids.length} ${t('bookmarks.teams')}, ${formData.user_ids.length} ${t('bookmarks.users')}`
+              : t('bookmarks.shareWithTeams')}
+          </Button>
+        </div>
 
         {error && (
           <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -300,6 +334,26 @@ export default function BookmarkModal({
           </Button>
         </div>
       </form>
+
+      <SharingModal
+        isOpen={sharingModalOpen}
+        onClose={() => setSharingModalOpen(false)}
+        onSave={(sharing) => {
+          setFormData({
+            ...formData,
+            user_ids: sharing.user_ids,
+            team_ids: sharing.team_ids,
+            share_all_teams: sharing.share_all_teams,
+          });
+        }}
+        currentShares={{
+          user_ids: formData.user_ids,
+          team_ids: formData.team_ids,
+          share_all_teams: formData.share_all_teams,
+        }}
+        teams={teams}
+        type="bookmark"
+      />
     </Modal>
   );
 }

@@ -11,6 +11,7 @@ router.use(requireAdmin());
  * /api/admin/settings:
  *   get:
  *     summary: Get all system settings
+ *     description: Returns all system configuration settings as a key-value object. Admin only.
  *     tags: [Admin - Settings]
  *     security:
  *       - cookieAuth: []
@@ -18,6 +19,19 @@ router.use(requireAdmin());
  *     responses:
  *       200:
  *         description: System settings
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               additionalProperties:
+ *                 type: string
+ *               example:
+ *                 setting1: "value1"
+ *                 setting2: "value2"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
  */
 router.get('/', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -42,6 +56,7 @@ router.get('/', async (req, res) => {
  * /api/admin/settings/{key}:
  *   get:
  *     summary: Get setting by key
+ *     description: Returns a specific system setting by its key. Admin only.
  *     tags: [Admin - Settings]
  *     security:
  *       - cookieAuth: []
@@ -52,9 +67,28 @@ router.get('/', async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *         description: Setting key
+ *         example: "app_name"
  *     responses:
  *       200:
  *         description: Setting value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 key:
+ *                   type: string
+ *                   example: "app_name"
+ *                 value:
+ *                   type: string
+ *                   example: "SlugBase"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: Setting not found
  */
 router.get('/:key', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -75,6 +109,7 @@ router.get('/:key', async (req, res) => {
  * /api/admin/settings:
  *   post:
  *     summary: Set system setting
+ *     description: Creates or updates a system setting. If the key exists, it will be updated. Admin only.
  *     tags: [Admin - Settings]
  *     security:
  *       - cookieAuth: []
@@ -91,11 +126,30 @@ router.get('/:key', async (req, res) => {
  *             properties:
  *               key:
  *                 type: string
+ *                 example: "app_name"
+ *                 description: Setting key (unique identifier)
  *               value:
  *                 type: string
+ *                 example: "SlugBase"
+ *                 description: Setting value (will be stored as string)
  *     responses:
  *       200:
- *         description: Setting saved
+ *         description: Setting saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 key:
+ *                   type: string
+ *                 value:
+ *                   type: string
+ *       400:
+ *         description: Missing key or value
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
  */
 router.post('/', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -123,6 +177,7 @@ router.post('/', async (req, res) => {
  * /api/admin/settings/{key}:
  *   delete:
  *     summary: Delete system setting
+ *     description: Deletes a system setting by its key. Admin only.
  *     tags: [Admin - Settings]
  *     security:
  *       - cookieAuth: []
@@ -133,9 +188,23 @@ router.post('/', async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *         description: Setting key to delete
+ *         example: "app_name"
  *     responses:
  *       200:
- *         description: Setting deleted
+ *         description: Setting deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Setting deleted"
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Admin access required
  */
 router.delete('/:key', async (req, res) => {
   const authReq = req as AuthRequest;

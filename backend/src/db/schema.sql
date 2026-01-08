@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS folders (
   id VARCHAR(255) PRIMARY KEY,
   user_id VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
+  icon VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE(user_id, name)
@@ -52,7 +53,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   user_id VARCHAR(255) NOT NULL,
   title TEXT NOT NULL,
   url TEXT NOT NULL,
-  slug VARCHAR(255) NOT NULL,
+  slug VARCHAR(255),
   forwarding_enabled BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -113,6 +114,24 @@ CREATE TABLE IF NOT EXISTS folder_team_shares (
   FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
+-- Bookmark user shares junction table
+CREATE TABLE IF NOT EXISTS bookmark_user_shares (
+  bookmark_id VARCHAR(255) NOT NULL,
+  user_id VARCHAR(255) NOT NULL,
+  PRIMARY KEY (bookmark_id, user_id),
+  FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Folder user shares junction table
+CREATE TABLE IF NOT EXISTS folder_user_shares (
+  folder_id VARCHAR(255) NOT NULL,
+  user_id VARCHAR(255) NOT NULL,
+  PRIMARY KEY (folder_id, user_id),
+  FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- System initialization flag
 CREATE TABLE IF NOT EXISTS system_config (
   key VARCHAR(255) PRIMARY KEY,
@@ -135,3 +154,7 @@ CREATE INDEX IF NOT EXISTS idx_folder_team_shares_folder ON folder_team_shares(f
 CREATE INDEX IF NOT EXISTS idx_folder_team_shares_team ON folder_team_shares(team_id);
 CREATE INDEX IF NOT EXISTS idx_bookmark_folders_bookmark ON bookmark_folders(bookmark_id);
 CREATE INDEX IF NOT EXISTS idx_bookmark_folders_folder ON bookmark_folders(folder_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_user_shares_bookmark ON bookmark_user_shares(bookmark_id);
+CREATE INDEX IF NOT EXISTS idx_bookmark_user_shares_user ON bookmark_user_shares(user_id);
+CREATE INDEX IF NOT EXISTS idx_folder_user_shares_folder ON folder_user_shares(folder_id);
+CREATE INDEX IF NOT EXISTS idx_folder_user_shares_user ON folder_user_shares(user_id);

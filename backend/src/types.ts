@@ -52,11 +52,13 @@ export interface Bookmark {
 export interface CreateBookmarkInput {
   title: string;
   url: string;
-  slug: string;
+  slug?: string;
   forwarding_enabled: boolean;
   folder_ids?: string[];
   tag_ids?: string[];
   team_ids?: string[];
+  user_ids?: string[];
+  share_all_teams?: boolean;
 }
 
 export interface UpdateBookmarkInput {
@@ -67,4 +69,6 @@ export interface UpdateBookmarkInput {
   folder_ids?: string[];
   tag_ids?: string[];
   team_ids?: string[];
+  user_ids?: string[];
+  share_all_teams?: boolean;
 }

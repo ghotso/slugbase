@@ -6,6 +6,52 @@ import { v4 as uuidv4 } from 'uuid';
 const router = Router();
 router.use(requireAuth());
 
+/**
+ * @swagger
+ * /api/folders:
+ *   get:
+ *     summary: Get all folders
+ *     description: Returns all folders for the authenticated user, including own folders and folders shared via teams or users.
+ *     tags: [Folders]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of folders
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     example: "123e4567-e89b-12d3-a456-426614174000"
+ *                   name:
+ *                     type: string
+ *                     example: "My Folder"
+ *                   icon:
+ *                     type: string
+ *                     nullable: true
+ *                     description: Lucide icon name
+ *                     example: "Folder"
+ *                   folder_type:
+ *                     type: string
+ *                     enum: [own, shared]
+ *                     example: "own"
+ *                   shared_teams:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *                   shared_users:
+ *                     type: array
+ *                     items:
+ *                       type: object
+ *       401:
+ *         description: Unauthorized
+ */
 // Get all folders for user (own + shared)
 router.get('/', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -19,15 +65,18 @@ router.get('/', async (req, res) => {
     );
     const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
 
-    // Get own folders + shared folders
+    // Get own folders + shared folders (via users, teams, or folder shares)
     let sql = `
       SELECT DISTINCT f.*,
              CASE WHEN f.user_id = ? THEN 'own' ELSE 'shared' END as folder_type
       FROM folders f
+      LEFT JOIN folder_user_shares fus ON f.id = fus.folder_id
       LEFT JOIN folder_team_shares fts ON f.id = fts.folder_id
-      WHERE (f.user_id = ? OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL))
+      WHERE (f.user_id = ?
+        OR fus.user_id = ?
+        OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL))
     `;
-    const params: any[] = [userId, userId];
+    const params: any[] = [userId, userId, userId];
     if (teamIds.length > 0) {
       params.push(...teamIds);
     }
@@ -35,8 +84,17 @@ router.get('/', async (req, res) => {
 
     const folders = await query(sql, params);
 
-    // Get shared teams for each folder
+    // Get shared teams and users for each folder
     for (const folder of folders as any[]) {
+      // Get owner info for shared folders
+      if (folder.user_id !== userId) {
+        const owner = await queryOne('SELECT id, name, email FROM users WHERE id = ?', [folder.user_id]);
+        if (owner) {
+          folder.user_name = owner.name;
+          folder.user_email = owner.email;
+        }
+      }
+      
       const sharedTeams = await query(
         `SELECT t.* FROM teams t
          INNER JOIN folder_team_shares fts ON t.id = fts.team_id
@@ -44,6 +102,14 @@ router.get('/', async (req, res) => {
         [folder.id]
       );
       folder.shared_teams = Array.isArray(sharedTeams) ? sharedTeams : (sharedTeams ? [sharedTeams] : []);
+      
+      const sharedUsers = await query(
+        `SELECT u.id, u.name, u.email FROM users u
+         INNER JOIN folder_user_shares fus ON u.id = fus.user_id
+         WHERE fus.folder_id = ?`,
+        [folder.id]
+      );
+      folder.shared_users = Array.isArray(sharedUsers) ? sharedUsers : (sharedUsers ? [sharedUsers] : []);
     }
 
     res.json(folders);
@@ -52,6 +118,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/folders/{id}:
+ *   get:
+ *     summary: Get folder by ID
+ *     description: Returns a single folder by ID. User must own the folder or have access via sharing.
+ *     tags: [Folders]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Folder ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Folder details
+ *       404:
+ *         description: Folder not found
+ *       401:
+ *         description: Unauthorized
+ */
 // Get single folder (own or shared)
 router.get('/:id', async (req, res) => {
   const authReq = req as AuthRequest;
@@ -69,10 +161,13 @@ router.get('/:id', async (req, res) => {
     let sql = `
       SELECT DISTINCT f.*
       FROM folders f
+      LEFT JOIN folder_user_shares fus ON f.id = fus.folder_id
       LEFT JOIN folder_team_shares fts ON f.id = fts.folder_id
-      WHERE f.id = ? AND (f.user_id = ? OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL))
+      WHERE f.id = ? AND (f.user_id = ?
+        OR fus.user_id = ?
+        OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL))
     `;
-    const params: any[] = [id, userId];
+    const params: any[] = [id, userId, userId];
     if (teamIds.length > 0) {
       params.push(...teamIds);
     }
@@ -90,6 +185,15 @@ router.get('/:id', async (req, res) => {
       [id]
     );
     (folder as any).shared_teams = Array.isArray(sharedTeams) ? sharedTeams : (sharedTeams ? [sharedTeams] : []);
+    
+    // Get shared users
+    const sharedUsers = await query(
+      `SELECT u.id, u.name, u.email FROM users u
+       INNER JOIN folder_user_shares fus ON u.id = fus.user_id
+       WHERE fus.folder_id = ?`,
+      [id]
+    );
+    (folder as any).shared_users = Array.isArray(sharedUsers) ? sharedUsers : (sharedUsers ? [sharedUsers] : []);
 
     res.json(folder);
   } catch (error: any) {
@@ -97,12 +201,66 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/folders:
+ *   post:
+ *     summary: Create a new folder
+ *     description: Creates a new folder. Can optionally share with teams or users.
+ *     tags: [Folders]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "My New Folder"
+ *               icon:
+ *                 type: string
+ *                 nullable: true
+ *                 description: Lucide icon name (e.g., "Folder", "Archive", "Briefcase")
+ *                 example: "Folder"
+ *               team_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of team IDs to share folder with
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000"]
+ *               user_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of user IDs to share folder with
+ *                 example: ["123e4567-e89b-12d3-a456-426614174000"]
+ *               share_all_teams:
+ *                 type: boolean
+ *                 default: false
+ *                 description: Share folder with all teams user is a member of
+ *                 example: false
+ *     responses:
+ *       201:
+ *         description: Folder created successfully
+ *       400:
+ *         description: Missing name or folder with same name already exists
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: User is not member of team
+ */
 // Create folder
 router.post('/', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
-    const { name } = req.body;
+    const { name, icon } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -115,12 +273,24 @@ router.post('/', async (req, res) => {
     }
 
     const folderId = uuidv4();
-    const { team_ids } = req.body;
+    const { team_ids, user_ids, share_all_teams } = req.body;
 
-    await execute('INSERT INTO folders (id, user_id, name) VALUES (?, ?, ?)', [folderId, userId, name]);
+    await execute('INSERT INTO folders (id, user_id, name, icon) VALUES (?, ?, ?, ?)', [folderId, userId, name, icon || null]);
 
-    // Add team shares if provided
-    if (team_ids && team_ids.length > 0) {
+    // Add team shares
+    if (share_all_teams) {
+      const userTeams = await query(
+        'SELECT team_id FROM team_members WHERE user_id = ?',
+        [userId]
+      );
+      const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
+      for (const teamId of teamIds) {
+        await execute(
+          'INSERT INTO folder_team_shares (folder_id, team_id) VALUES (?, ?)',
+          [folderId, teamId]
+        );
+      }
+    } else if (team_ids && team_ids.length > 0) {
       // Verify user is member of all teams
       for (const teamId of team_ids) {
         const isMember = await queryOne(
@@ -137,6 +307,21 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Add user shares
+    if (user_ids && user_ids.length > 0) {
+      const filteredUserIds = user_ids.filter((uid: string) => uid !== userId);
+      for (const shareUserId of filteredUserIds) {
+        const user = await queryOne('SELECT id FROM users WHERE id = ?', [shareUserId]);
+        if (!user) {
+          return res.status(404).json({ error: `User ${shareUserId} not found` });
+        }
+        await execute(
+          'INSERT INTO folder_user_shares (folder_id, user_id) VALUES (?, ?)',
+          [folderId, shareUserId]
+        );
+      }
+    }
+
     const folder = await queryOne('SELECT * FROM folders WHERE id = ?', [folderId]);
     res.status(201).json(folder);
   } catch (error: any) {
@@ -144,13 +329,70 @@ router.post('/', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/folders/{id}:
+ *   put:
+ *     summary: Update folder
+ *     description: Updates an existing folder. User must own the folder.
+ *     tags: [Folders]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Folder ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Updated Folder Name"
+ *               icon:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "Archive"
+ *               team_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of team IDs (replaces existing shares)
+ *               user_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of user IDs (replaces existing shares)
+ *               share_all_teams:
+ *                 type: boolean
+ *                 description: Share with all teams user is a member of
+ *     responses:
+ *       200:
+ *         description: Folder updated successfully
+ *       400:
+ *         description: Missing name or folder with same name already exists
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Folder not found
+ */
 // Update folder
 router.put('/:id', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, icon } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -167,14 +409,26 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Folder with this name already exists' });
     }
 
-    const { team_ids } = req.body;
+    const { team_ids, user_ids, share_all_teams } = req.body;
 
-    await execute('UPDATE folders SET name = ? WHERE id = ?', [name, id]);
+    await execute('UPDATE folders SET name = ?, icon = ? WHERE id = ?', [name, icon || null, id]);
 
     // Update team shares if provided
-    if (team_ids !== undefined) {
+    if (share_all_teams !== undefined || team_ids !== undefined) {
       await execute('DELETE FROM folder_team_shares WHERE folder_id = ?', [id]);
-      if (team_ids.length > 0) {
+      if (share_all_teams) {
+        const userTeams = await query(
+          'SELECT team_id FROM team_members WHERE user_id = ?',
+          [userId]
+        );
+        const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
+        for (const teamId of teamIds) {
+          await execute(
+            'INSERT INTO folder_team_shares (folder_id, team_id) VALUES (?, ?)',
+            [id, teamId]
+          );
+        }
+      } else if (team_ids && team_ids.length > 0) {
         // Verify user is member of all teams
         for (const teamId of team_ids) {
           const isMember = await queryOne(
@@ -192,6 +446,24 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Update user shares if provided
+    if (user_ids !== undefined) {
+      await execute('DELETE FROM folder_user_shares WHERE folder_id = ?', [id]);
+      if (user_ids.length > 0) {
+        const filteredUserIds = user_ids.filter((uid: string) => uid !== userId);
+        for (const shareUserId of filteredUserIds) {
+          const user = await queryOne('SELECT id FROM users WHERE id = ?', [shareUserId]);
+          if (!user) {
+            return res.status(404).json({ error: `User ${shareUserId} not found` });
+          }
+          await execute(
+            'INSERT INTO folder_user_shares (folder_id, user_id) VALUES (?, ?)',
+            [id, shareUserId]
+          );
+        }
+      }
+    }
+
     const updated = await queryOne('SELECT * FROM folders WHERE id = ?', [id]);
     res.json(updated);
   } catch (error: any) {
@@ -199,6 +471,40 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/folders/{id}:
+ *   delete:
+ *     summary: Delete folder
+ *     description: Deletes a folder and all bookmarks within it. User must own the folder.
+ *     tags: [Folders]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Folder ID
+ *         example: "123e4567-e89b-12d3-a456-426614174000"
+ *     responses:
+ *       200:
+ *         description: Folder deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Folder deleted"
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Folder not found
+ */
 // Delete folder
 router.delete('/:id', async (req, res) => {
   const authReq = req as AuthRequest;
