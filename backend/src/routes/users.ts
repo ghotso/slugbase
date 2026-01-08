@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { queryOne, execute } from '../db/index.js';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
+import { validateEmail, normalizeEmail, validateLength, sanitizeString } from '../utils/validation.js';
 
 const router = Router();
 router.use(requireAuth());
@@ -59,7 +60,7 @@ router.get('/me', async (req, res) => {
  * /api/users/me:
  *   put:
  *     summary: Update user settings
- *     description: Updates the authenticated user's language and theme preferences
+ *     description: Updates the authenticated user's profile information including email, name, language, and theme preferences
  *     tags: [Users]
  *     security:
  *       - cookieAuth: []
@@ -71,6 +72,15 @@ router.get('/me', async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "updated@example.com"
+ *                 description: User's email address (must be unique)
+ *               name:
+ *                 type: string
+ *                 example: "Updated Name"
+ *                 description: User's display name
  *               language:
  *                 type: string
  *                 enum: [en, de, fr]
@@ -85,7 +95,7 @@ router.get('/me', async (req, res) => {
  *       200:
  *         description: User settings updated successfully
  *       400:
- *         description: No fields to update
+ *         description: Invalid input or email already exists
  *       401:
  *         description: Unauthorized
  */
@@ -94,10 +104,43 @@ router.put('/me', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
-    const { language, theme } = req.body;
+    const { email, name, language, theme } = req.body;
+
+    const existing = await queryOne('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!existing) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     const updates: string[] = [];
     const params: any[] = [];
+
+    // Validate and update email if provided
+    if (email !== undefined) {
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.valid) {
+        return res.status(400).json({ error: emailValidation.error });
+      }
+      const normalizedEmail = normalizeEmail(email);
+      // Check email uniqueness if changed
+      if (normalizedEmail !== (existing as any).email) {
+        const emailExists = await queryOne('SELECT id FROM users WHERE email = ? AND id != ?', [normalizedEmail, userId]);
+        if (emailExists) {
+          return res.status(400).json({ error: 'User with this email already exists' });
+        }
+      }
+      updates.push('email = ?');
+      params.push(normalizedEmail);
+    }
+
+    // Validate and update name if provided
+    if (name !== undefined) {
+      const nameValidation = validateLength(name, 'Name', 1, 255);
+      if (!nameValidation.valid) {
+        return res.status(400).json({ error: nameValidation.error });
+      }
+      updates.push('name = ?');
+      params.push(sanitizeString(name));
+    }
 
     if (language !== undefined) {
       updates.push('language = ?');

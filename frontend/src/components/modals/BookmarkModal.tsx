@@ -130,7 +130,7 @@ export default function BookmarkModal({
       const errorMessage = err.response?.data?.error || t('common.error');
       setError(errorMessage);
       // If it's a slug uniqueness error, highlight the slug field
-      if (errorMessage.includes('Slug already exists')) {
+      if (errorMessage.includes(t('bookmarks.slugAlreadyExists')) || errorMessage.toLowerCase().includes('slug') && errorMessage.toLowerCase().includes('exists')) {
         // Error is already set, user will see it
       }
     } finally {
@@ -314,7 +314,12 @@ export default function BookmarkModal({
             {formData.share_all_teams
               ? t('bookmarks.shareAllTeams')
               : formData.team_ids.length > 0 || formData.user_ids.length > 0
-              ? `${formData.team_ids.length} ${t('bookmarks.teams')}, ${formData.user_ids.length} ${t('bookmarks.users')}`
+              ? t('bookmarks.sharingSummary', { 
+                  teamCount: formData.team_ids.length, 
+                  teams: formData.team_ids.length === 1 ? t('common.team') : t('common.teams'),
+                  userCount: formData.user_ids.length,
+                  users: formData.user_ids.length === 1 ? t('common.user') : t('common.users')
+                })
               : t('bookmarks.shareWithTeams')}
           </Button>
         </div>

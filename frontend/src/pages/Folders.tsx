@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/client';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { Plus, Edit, Trash2, Share2 } from 'lucide-react';
 import FolderModal from '../components/modals/FolderModal';
 import Button from '../components/ui/Button';
@@ -16,6 +18,7 @@ interface Folder {
 
 export default function Folders() {
   const { t } = useTranslation();
+  const { showConfirm, dialogState } = useConfirmDialog();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,14 +54,20 @@ export default function Folders() {
     setModalOpen(true);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('folders.deleteConfirm'))) return;
-    try {
-      await api.delete(`/folders/${id}`);
-      loadData();
-    } catch (error) {
-      console.error('Failed to delete folder:', error);
-    }
+  function handleDelete(id: string) {
+    showConfirm(
+      t('folders.deleteFolder'),
+      t('folders.deleteConfirm'),
+      async () => {
+        try {
+          await api.delete(`/folders/${id}`);
+          loadData();
+        } catch (error) {
+          console.error('Failed to delete folder:', error);
+        }
+      },
+      { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
+    );
   }
 
   function handleModalClose() {
@@ -181,6 +190,8 @@ export default function Folders() {
         onClose={handleModalClose}
         onSuccess={loadData}
       />
+
+      <ConfirmDialog {...dialogState} />
     </div>
   );
 }

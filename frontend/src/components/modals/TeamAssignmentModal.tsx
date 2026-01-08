@@ -139,7 +139,7 @@ export default function TeamAssignmentModal({
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title={`${t('admin.manageTeams')} - ${userName}`}
+        title={t('admin.manageTeamsTitle', { userName })}
         size="lg"
       >
         {loading ? (
@@ -258,7 +258,7 @@ export default function TeamAssignmentModal({
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        title={`${t('admin.manageMembers')} - ${teamName}`}
+        title={t('admin.manageMembersTitle', { teamName })}
         size="lg"
       >
         {loading ? (

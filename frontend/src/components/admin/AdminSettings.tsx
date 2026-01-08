@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/client';
 import { Save, Plus, Trash2, Settings as SettingsIcon, Mail, Send } from 'lucide-react';
 import Button from '../ui/Button';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 
 export default function AdminSettings() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { showConfirm, dialogState } = useConfirmDialog();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [newKey, setNewKey] = useState('');
@@ -22,7 +27,6 @@ export default function AdminSettings() {
     from: '',
     fromName: 'SlugBase',
   });
-  const [testEmail, setTestEmail] = useState('');
   const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => {
@@ -75,16 +79,22 @@ export default function AdminSettings() {
     }
   };
 
-  const handleDelete = async (key: string) => {
-    if (!confirm(t('admin.confirmDeleteSetting'))) return;
-    try {
-      await api.delete(`/admin/settings/${key}`);
-      const newSettings = { ...settings };
-      delete newSettings[key];
-      setSettings(newSettings);
-    } catch (error: any) {
-      alert(error.response?.data?.error || t('common.error'));
-    }
+  const handleDelete = (key: string) => {
+    showConfirm(
+      t('admin.confirmDeleteSetting'),
+      t('admin.confirmDeleteSetting'),
+      async () => {
+        try {
+          await api.delete(`/admin/settings/${key}`);
+          const newSettings = { ...settings };
+          delete newSettings[key];
+          setSettings(newSettings);
+        } catch (error: any) {
+          alert(error.response?.data?.error || t('common.error'));
+        }
+      },
+      { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
+    );
   };
 
   const handleSMTPSave = async () => {
@@ -98,13 +108,13 @@ export default function AdminSettings() {
   };
 
   const handleTestEmail = async () => {
-    if (!testEmail) {
-      alert('Please enter a test email address');
+    if (!user?.email) {
+      alert(t('admin.noUserEmailAvailable'));
       return;
     }
     setTestingEmail(true);
     try {
-      await api.post('/admin/settings/smtp/test', { email: testEmail });
+      await api.post('/admin/settings/smtp/test', { email: user.email });
       alert(t('smtp.testSent'));
     } catch (error: any) {
       alert(error.response?.data?.error || t('smtp.testFailed'));
@@ -156,9 +166,7 @@ export default function AdminSettings() {
             </label>
           </div>
 
-          {smtpSettings.enabled && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                     {t('smtp.host')}
@@ -254,20 +262,16 @@ export default function AdminSettings() {
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                     {t('smtp.testEmail')}
                   </label>
-                  <input
-                    type="email"
-                    className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder={t('smtp.testEmailPlaceholder')}
-                    value={testEmail}
-                    onChange={(e) => setTestEmail(e.target.value)}
-                  />
+                  <div className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg">
+                    {user?.email || t('common.loading')}
+                  </div>
                 </div>
                 <div className="pt-6">
                   <Button
                     variant="ghost"
                     icon={Send}
                     onClick={handleTestEmail}
-                    disabled={testingEmail || !testEmail}
+                    disabled={testingEmail || !user?.email}
                   >
                     {t('smtp.sendTest')}
                   </Button>
@@ -279,8 +283,6 @@ export default function AdminSettings() {
                   {t('smtp.save')}
                 </Button>
               </div>
-            </>
-          )}
         </div>
       </div>
 
@@ -288,7 +290,7 @@ export default function AdminSettings() {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('admin.settings')}</h2>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {Object.keys(generalSettings).length} {Object.keys(generalSettings).length === 1 ? 'setting' : 'settings'}
+          {Object.keys(generalSettings).length} {Object.keys(generalSettings).length === 1 ? t('common.setting') : t('common.settings')}
         </p>
       </div>
 
@@ -370,6 +372,8 @@ export default function AdminSettings() {
           </Button>
         </form>
       </div>
+
+      <ConfirmDialog {...dialogState} />
     </div>
   );
 }

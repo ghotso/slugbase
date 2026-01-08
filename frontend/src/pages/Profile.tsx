@@ -9,15 +9,22 @@ export default function Profile() {
   const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const [formData, setFormData] = useState({
+    email: '',
+    name: '',
     language: 'en',
     theme: 'auto',
   });
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; name?: string }>({});
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [editingName, setEditingName] = useState(false);
 
   useEffect(() => {
     if (user) {
       setFormData({
+        email: user.email || '',
+        name: user.name || '',
         language: user.language || 'en',
         theme: user.theme || 'auto',
       });
@@ -27,10 +34,23 @@ export default function Profile() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setErrors({});
     try {
       await updateUser(formData);
-    } catch (error) {
+      setEditingEmail(false);
+      setEditingName(false);
+    } catch (error: any) {
       console.error('Failed to update profile:', error);
+      if (error.response?.data?.error) {
+        const errorMessage = error.response.data.error;
+        if (errorMessage.includes('email')) {
+          setErrors({ email: errorMessage });
+        } else if (errorMessage.includes('name') || errorMessage.includes('Name')) {
+          setErrors({ name: errorMessage });
+        } else {
+          setErrors({ email: errorMessage, name: errorMessage });
+        }
+      }
     } finally {
       setSaving(false);
     }
@@ -88,7 +108,58 @@ export default function Profile() {
               <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1">
                 {t('profile.email')}
               </label>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
+              {editingEmail ? (
+                <div className="space-y-1">
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      setErrors({ ...errors, email: undefined });
+                    }}
+                    className="w-full px-4 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder={t('profile.emailPlaceholder')}
+                  />
+                  {errors.email && (
+                    <p className="text-xs text-red-600 dark:text-red-400">{errors.email}</p>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSubmit}
+                      disabled={saving}
+                    >
+                      {saving ? t('common.loading') : t('common.save')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingEmail(false);
+                        setFormData({ ...formData, email: user?.email || '' });
+                        setErrors({ ...errors, email: undefined });
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.email}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingEmail(true)}
+                  >
+                    {t('common.edit')}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -103,7 +174,58 @@ export default function Profile() {
               <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1">
                 {t('profile.name')}
               </label>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{user.name}</p>
+              {editingName ? (
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      setErrors({ ...errors, name: undefined });
+                    }}
+                    className="w-full px-4 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder={t('profile.namePlaceholder')}
+                  />
+                  {errors.name && (
+                    <p className="text-xs text-red-600 dark:text-red-400">{errors.name}</p>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSubmit}
+                      disabled={saving}
+                    >
+                      {saving ? t('common.loading') : t('common.save')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setEditingName(false);
+                        setFormData({ ...formData, name: user?.name || '' });
+                        setErrors({ ...errors, name: undefined });
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.name}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingName(true)}
+                  >
+                    {t('common.edit')}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 

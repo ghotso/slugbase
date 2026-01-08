@@ -299,7 +299,12 @@ export default function FolderModal({
             {formData.share_all_teams
               ? t('bookmarks.shareAllTeams')
               : formData.team_ids.length > 0 || formData.user_ids.length > 0
-              ? `${formData.team_ids.length} ${t('bookmarks.teams')}, ${formData.user_ids.length} ${t('bookmarks.users')}`
+              ? t('bookmarks.sharingSummary', { 
+                  teamCount: formData.team_ids.length, 
+                  teams: formData.team_ids.length === 1 ? t('common.team') : t('common.teams'),
+                  userCount: formData.user_ids.length,
+                  users: formData.user_ids.length === 1 ? t('common.user') : t('common.users')
+                })
               : t('folders.shareWithTeams')}
           </Button>
         </div>

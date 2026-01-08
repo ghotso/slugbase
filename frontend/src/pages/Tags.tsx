@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../api/client';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { Plus, Edit, Trash2, Tag as TagIcon } from 'lucide-react';
 import TagModal from '../components/modals/TagModal';
 import Button from '../components/ui/Button';
@@ -12,6 +14,7 @@ interface Tag {
 
 export default function Tags() {
   const { t } = useTranslation();
+  const { showConfirm, dialogState } = useConfirmDialog();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -42,14 +45,20 @@ export default function Tags() {
     setModalOpen(true);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('tags.deleteConfirm'))) return;
-    try {
-      await api.delete(`/tags/${id}`);
-      loadTags();
-    } catch (error) {
-      console.error('Failed to delete tag:', error);
-    }
+  function handleDelete(id: string) {
+    showConfirm(
+      t('tags.deleteTag'),
+      t('tags.deleteConfirm'),
+      async () => {
+        try {
+          await api.delete(`/tags/${id}`);
+          loadTags();
+        } catch (error) {
+          console.error('Failed to delete tag:', error);
+        }
+      },
+      { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
+    );
   }
 
   function handleModalClose() {
@@ -74,7 +83,7 @@ export default function Tags() {
             {t('tags.title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {tags.length} {tags.length === 1 ? 'tag' : 'tags'}
+            {tags.length} {tags.length === 1 ? t('common.tag') : t('common.tags')}
           </p>
         </div>
         <Button onClick={handleCreate} icon={Plus}>
@@ -143,6 +152,8 @@ export default function Tags() {
         onClose={handleModalClose}
         onSuccess={loadTags}
       />
+
+      <ConfirmDialog {...dialogState} />
     </div>
   );
 }

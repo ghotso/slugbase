@@ -1,10 +1,15 @@
+// IMPORTANT: Load environment variables FIRST, before any other imports
+// that might use process.env at module load time
+import './load-env.js';
+
+// Now import other modules (they can safely use process.env)
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
-import dotenv from 'dotenv';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import { initDatabase, isInitialized } from './db/index.js';
 import { setupOIDC, loadOIDCStrategies } from './auth/oidc.js';
 import { setupJWT } from './auth/jwt.js';
@@ -26,16 +31,15 @@ import adminSettingsRoutes from './routes/admin/settings.js';
 import passwordResetRoutes from './routes/password-reset.js';
 import csrfRoutes from './routes/csrf.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-dotenv.config();
-
 // Validate required environment variables before starting
 validateEnvironmentVariables();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Get __dirname for path resolution
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Security headers (must be early in middleware chain)
 app.use(setupSecurityHeaders());
@@ -46,8 +50,33 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Middleware
+// CORS: Allow both the configured FRONTEND_URL and common development ports
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+const allowedOrigins = [
+  frontendUrl,
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+].filter((url, index, self) => self.indexOf(url) === index); // Remove duplicates
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // In development, allow any localhost origin
+      if (process.env.NODE_ENV === 'development' && origin.includes('localhost')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
@@ -67,6 +96,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'SlugBase API Documentation',
 }));
+
+// Routes (register CSRF token endpoint BEFORE CSRF protection)
+app.use('/api/csrf-token', csrfRoutes);
 
 // CSRF protection for state-changing operations
 // Note: CSRF tokens are provided via GET /api/csrf-token endpoint
@@ -90,8 +122,7 @@ app.use((req: any, res: any, next: any) => {
   csrfProtection(req, res, next);
 });
 
-// Routes
-app.use('/api/csrf-token', csrfRoutes); // Must be before CSRF protection
+// All other routes
 app.use('/api/auth', authRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);

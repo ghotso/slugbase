@@ -4,30 +4,42 @@ import crypto from 'crypto';
 
 /**
  * Rate limiting configuration
+ * Disabled in development for easier testing
  */
-export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
-  message: 'Too many authentication attempts, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true, // Don't count successful requests
-});
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-export const generalRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// No-op rate limiter for development (allows all requests)
+const noOpRateLimiter = (req: any, res: any, next: any) => next();
 
-export const strictRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 requests per windowMs
-  message: 'Too many requests, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+export const authRateLimiter = isDevelopment
+  ? noOpRateLimiter
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 5, // Limit each IP to 5 requests per windowMs
+      message: 'Too many authentication attempts, please try again later.',
+      standardHeaders: true,
+      legacyHeaders: false,
+      skipSuccessfulRequests: true, // Don't count successful requests
+    });
+
+export const generalRateLimiter = isDevelopment
+  ? noOpRateLimiter
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // Limit each IP to 100 requests per windowMs
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+
+export const strictRateLimiter = isDevelopment
+  ? noOpRateLimiter
+  : rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 10, // Limit each IP to 10 requests per windowMs
+      message: 'Too many requests, please try again later.',
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
 
 /**
  * Security headers middleware

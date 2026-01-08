@@ -15,6 +15,13 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true
+      },
+      // Proxy forwarding URLs to backend
+      // Matches pattern: /{user_key}/{slug} where user_key and slug are alphanumeric
+      '^/([a-zA-Z0-9]+)/([a-zA-Z0-9_-]+)$': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        rewrite: (path) => path // Keep the path as-is
       }
     }
   }

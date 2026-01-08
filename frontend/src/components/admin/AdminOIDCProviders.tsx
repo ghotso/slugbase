@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { Plus, Edit, Trash2, Key, Globe } from 'lucide-react';
 import OIDCProviderModal from '../modals/OIDCProviderModal';
 import Button from '../ui/Button';
@@ -17,6 +19,7 @@ interface OIDCProvider {
 
 export default function AdminOIDCProviders() {
   const { t } = useTranslation();
+  const { showConfirm, dialogState } = useConfirmDialog();
   const [providers, setProviders] = useState<OIDCProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -42,14 +45,20 @@ export default function AdminOIDCProviders() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('admin.confirmDeleteProvider'))) return;
-    try {
-      await api.delete(`/oidc-providers/${id}`);
-      loadProviders();
-    } catch (error: any) {
-      alert(error.response?.data?.error || t('common.error'));
-    }
+  const handleDelete = (id: string) => {
+    showConfirm(
+      t('admin.confirmDeleteProvider'),
+      t('admin.confirmDeleteProvider'),
+      async () => {
+        try {
+          await api.delete(`/oidc-providers/${id}`);
+          loadProviders();
+        } catch (error: any) {
+          alert(error.response?.data?.error || t('common.error'));
+        }
+      },
+      { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
+    );
   };
 
   const handleModalClose = () => {
@@ -73,7 +82,7 @@ export default function AdminOIDCProviders() {
             {t('admin.oidcProviders')}
           </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {providers.length} {providers.length === 1 ? 'provider' : 'providers'}
+            {providers.length} {providers.length === 1 ? t('common.provider') : t('common.providers')}
           </p>
         </div>
         <Button onClick={() => setModalOpen(true)} icon={Plus}>
@@ -84,7 +93,7 @@ export default function AdminOIDCProviders() {
       {providers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
           <Key className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No OIDC providers configured</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">{t('auth.noProviders')}</p>
           <Button onClick={() => setModalOpen(true)} variant="primary" size="sm" icon={Plus}>
             {t('admin.addProvider')}
           </Button>
@@ -146,6 +155,8 @@ export default function AdminOIDCProviders() {
         onClose={handleModalClose}
         onSuccess={loadProviders}
       />
+
+      <ConfirmDialog {...dialogState} />
     </div>
   );
 }

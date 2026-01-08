@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
+import { useToast } from '../components/ui/Toast';
 import { Plus, Edit, Trash2, Copy, ExternalLink, Share2, Tag as TagIcon } from 'lucide-react';
 import BookmarkModal from '../components/modals/BookmarkModal';
 import Button from '../components/ui/Button';
@@ -24,6 +28,8 @@ interface Bookmark {
 export default function Bookmarks() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { showConfirm, dialogState } = useConfirmDialog();
+  const { showToast } = useToast();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [folders, setFolders] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
@@ -67,21 +73,27 @@ export default function Bookmarks() {
     setModalOpen(true);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('bookmarks.deleteConfirm'))) return;
-    try {
-      await api.delete(`/bookmarks/${id}`);
-      loadData();
-    } catch (error) {
-      console.error('Failed to delete bookmark:', error);
-    }
+  function handleDelete(id: string) {
+    showConfirm(
+      t('bookmarks.deleteBookmark'),
+      t('bookmarks.deleteConfirm'),
+      async () => {
+        try {
+          await api.delete(`/bookmarks/${id}`);
+          loadData();
+        } catch (error) {
+          console.error('Failed to delete bookmark:', error);
+        }
+      },
+      { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
+    );
   }
 
   function handleCopyUrl(bookmark: Bookmark) {
     const baseUrl = window.location.origin;
     const url = `${baseUrl}/${user?.user_key}/${bookmark.slug}`;
     navigator.clipboard.writeText(url);
-    alert(t('bookmarks.copied'));
+    showToast(t('bookmarks.copied'), 'success');
   }
 
   function handleModalClose() {
@@ -117,7 +129,7 @@ export default function Bookmarks() {
             {t('bookmarks.title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
+            {bookmarks.length} {bookmarks.length === 1 ? t('common.bookmark') : t('common.bookmarks')}
           </p>
         </div>
         <Button onClick={handleCreate} icon={Plus}>
@@ -269,6 +281,28 @@ export default function Bookmarks() {
         </div>
       )}
 
+      {/* Search Engine Setup Guide Note */}
+      <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <Copy className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              {t('bookmarks.searchEngineNote')}{' '}
+              <Link
+                to="/search-engine-guide"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium underline"
+              >
+                {t('bookmarks.searchEngineGuideLink')}
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+
       <BookmarkModal
         bookmark={editingBookmark}
         folders={folders}
@@ -281,6 +315,8 @@ export default function Bookmarks() {
           setTags([...tags, newTag]);
         }}
       />
+
+      <ConfirmDialog {...dialogState} />
     </div>
   );
 }

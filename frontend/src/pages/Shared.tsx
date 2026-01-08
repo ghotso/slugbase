@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
+import { useToast } from '../components/ui/Toast';
 import { Share2, ExternalLink, Copy, Tag as TagIcon, Users, User } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Favicon from '../components/Favicon';
@@ -37,6 +38,7 @@ interface SharedFolder {
 export default function Shared() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [bookmarks, setBookmarks] = useState<SharedBookmark[]>([]);
   const [folders, setFolders] = useState<SharedFolder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function Shared() {
     const baseUrl = window.location.origin;
     const url = `${baseUrl}/${bookmark.slug}`;
     navigator.clipboard.writeText(url);
-    alert(t('bookmarks.copied'));
+    showToast(t('bookmarks.copied'), 'success');
   }
 
   if (loading) {

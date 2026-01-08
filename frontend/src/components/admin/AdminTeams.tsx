@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 import { Plus, Edit, Trash2, Users, Network } from 'lucide-react';
 import TeamModal from '../modals/TeamModal';
 import TeamAssignmentModal from '../modals/TeamAssignmentModal';
@@ -16,6 +18,7 @@ interface Team {
 
 export default function AdminTeams() {
   const { t } = useTranslation();
+  const { showConfirm, dialogState } = useConfirmDialog();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -48,14 +51,20 @@ export default function AdminTeams() {
     setAssignmentModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('admin.confirmDeleteTeam'))) return;
-    try {
-      await api.delete(`/admin/teams/${id}`);
-      loadTeams();
-    } catch (error: any) {
-      alert(error.response?.data?.error || t('common.error'));
-    }
+  const handleDelete = (id: string) => {
+    showConfirm(
+      t('admin.confirmDeleteTeam'),
+      t('admin.confirmDeleteTeam'),
+      async () => {
+        try {
+          await api.delete(`/admin/teams/${id}`);
+          loadTeams();
+        } catch (error: any) {
+          alert(error.response?.data?.error || t('common.error'));
+        }
+      },
+      { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
+    );
   };
 
   const handleModalClose = () => {
@@ -93,7 +102,7 @@ export default function AdminTeams() {
       {teams.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
           <Users className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No teams yet</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">{t('admin.noTeamsYet')}</p>
           <Button onClick={() => setModalOpen(true)} variant="primary" size="sm" icon={Plus}>
             {t('admin.addTeam')}
           </Button>
@@ -164,6 +173,8 @@ export default function AdminTeams() {
           onSuccess={loadTeams}
         />
       )}
+
+      <ConfirmDialog {...dialogState} />
     </div>
   );
 }

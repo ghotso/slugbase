@@ -5,6 +5,8 @@ import { Plus, Edit, Trash2, Shield, Mail, Network } from 'lucide-react';
 import UserModal from '../modals/UserModal';
 import TeamAssignmentModal from '../modals/TeamAssignmentModal';
 import Button from '../ui/Button';
+import ConfirmDialog from '../ui/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 
 interface User {
   id: string;
@@ -17,6 +19,7 @@ interface User {
 
 export default function AdminUsers() {
   const { t } = useTranslation();
+  const { showConfirm, dialogState } = useConfirmDialog();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,14 +52,20 @@ export default function AdminUsers() {
     setAssignmentModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('admin.confirmDeleteUser'))) return;
-    try {
-      await api.delete(`/admin/users/${id}`);
-      loadUsers();
-    } catch (error: any) {
-      alert(error.response?.data?.error || t('common.error'));
-    }
+  const handleDelete = (id: string) => {
+    showConfirm(
+      t('admin.confirmDeleteUser'),
+      t('admin.confirmDeleteUser'),
+      async () => {
+        try {
+          await api.delete(`/admin/users/${id}`);
+          loadUsers();
+        } catch (error: any) {
+          alert(error.response?.data?.error || t('common.error'));
+        }
+      },
+      { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
+    );
   };
 
   const handleModalClose = () => {
@@ -83,7 +92,7 @@ export default function AdminUsers() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('admin.users')}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {users.length} {users.length === 1 ? 'user' : 'users'}
+            {users.length} {users.length === 1 ? t('common.user') : t('common.users')}
           </p>
         </div>
         <Button onClick={() => setModalOpen(true)} icon={Plus}>
@@ -164,6 +173,8 @@ export default function AdminUsers() {
           onSuccess={loadUsers}
         />
       )}
+
+      <ConfirmDialog {...dialogState} />
     </div>
   );
 }

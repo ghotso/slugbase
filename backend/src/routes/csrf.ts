@@ -27,7 +27,8 @@ const router = Router();
  *             schema:
  *               type: string
  */
-router.get('/csrf-token', (req, res) => {
+// Route is mounted at /api/csrf-token, so this handles GET /api/csrf-token
+router.get('/', (req, res) => {
   try {
     const token = generateCSRFToken(req, res);
     res.json({ csrfToken: token });
