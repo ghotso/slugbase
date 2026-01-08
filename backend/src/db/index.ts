@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { Pool } from 'pg';
-import { readFileSync } from 'fs';
+import { readFileSync, chmodSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -34,6 +34,14 @@ if (DB_TYPE === 'postgresql') {
 } else {
   const dbPath = process.env.DB_PATH || join(__dirname, '../../data/slugbase.db');
   db = new Database(dbPath);
+  
+  // Set secure file permissions (600 = read/write for owner only)
+  try {
+    chmodSync(dbPath, 0o600);
+  } catch (error) {
+    // Ignore errors if file doesn't exist yet or permissions can't be set
+    console.warn('Could not set database file permissions:', error);
+  }
 }
 
 export async function initDatabase() {

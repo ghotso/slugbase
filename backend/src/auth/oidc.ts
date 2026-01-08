@@ -1,8 +1,16 @@
 import passport from 'passport';
 import { Strategy as OpenIDConnectStrategy, Profile } from 'passport-openidconnect';
+import crypto from 'crypto';
 import { queryOne, execute, query } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { decrypt } from '../utils/encryption.js';
+
+function generateUserKey(): string {
+  // Use cryptographically secure random generation
+  // Generate 8 random bytes and convert to base36-like string (alphanumeric)
+  // Convert to hex first, then take first 12 characters for a good length
+  return crypto.randomBytes(8).toString('hex').substring(0, 12);
+}
 
 export function setupOIDC() {
   // No serialization needed for JWT-based auth
@@ -121,9 +129,6 @@ export async function loadOIDCStrategies() {
   }
 }
 
-function generateUserKey(): string {
-  return Math.random().toString(36).substring(2, 10);
-}
 
 export async function reloadOIDCStrategies() {
   // Remove existing strategies (except 'jwt' which is our JWT strategy)

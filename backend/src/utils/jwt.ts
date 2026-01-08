@@ -1,6 +1,12 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 
-const JWT_SECRET = (process.env.JWT_SECRET || process.env.SESSION_SECRET || 'slugbase-jwt-secret-change-in-production') as string;
+// JWT_SECRET is validated at startup via validateEnvironmentVariables()
+// This will throw if not set, preventing insecure defaults
+const JWT_SECRET = process.env.JWT_SECRET as string;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Please set it before starting the server.');
+}
+
 const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as string;
 
 export interface JWTPayload {

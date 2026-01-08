@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { query, queryOne, execute } from '../../db/index.js';
 import { AuthRequest, requireAuth, requireAdmin } from '../../middleware/auth.js';
+import { testSMTPConfig } from '../../utils/email.js';
+import { encrypt } from '../../utils/encryption.js';
 
 const router = Router();
 router.use(requireAuth());
@@ -212,6 +214,148 @@ router.delete('/:key', async (req, res) => {
     const { key } = req.params;
     await execute('DELETE FROM system_config WHERE key = ?', [key]);
     res.json({ message: 'Setting deleted' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/settings/smtp/test:
+ *   post:
+ *     summary: Test SMTP configuration
+ *     description: Sends a test email to verify SMTP settings are working. Admin only.
+ *     tags: [Admin - Settings]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: "test@example.com"
+ *     responses:
+ *       200:
+ *         description: Test email sent successfully
+ *       400:
+ *         description: SMTP not configured or test failed
+ */
+router.post('/smtp/test', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const result = await testSMTPConfig(email);
+    if (result.success) {
+      res.json({ message: 'Test email sent successfully' });
+    } else {
+      res.status(400).json({ error: result.error || 'Failed to send test email' });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/settings/smtp:
+ *   post:
+ *     summary: Update SMTP settings
+ *     description: Updates SMTP configuration. Password is encrypted before storage. Admin only.
+ *     tags: [Admin - Settings]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *                 example: true
+ *               host:
+ *                 type: string
+ *                 example: "smtp.gmail.com"
+ *               port:
+ *                 type: number
+ *                 example: 587
+ *               secure:
+ *                 type: boolean
+ *                 example: false
+ *               user:
+ *                 type: string
+ *                 example: "your-email@gmail.com"
+ *               password:
+ *                 type: string
+ *                 example: "your-password"
+ *               from:
+ *                 type: string
+ *                 example: "noreply@example.com"
+ *               fromName:
+ *                 type: string
+ *                 example: "SlugBase"
+ *     responses:
+ *       200:
+ *         description: SMTP settings updated successfully
+ */
+router.post('/smtp', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const { enabled, host, port, secure, user, password, from, fromName } = req.body;
+
+    const settings: Array<{ key: string; value: string }> = [];
+
+    if (enabled !== undefined) {
+      settings.push({ key: 'smtp_enabled', value: enabled ? 'true' : 'false' });
+    }
+    if (host !== undefined) {
+      settings.push({ key: 'smtp_host', value: host });
+    }
+    if (port !== undefined) {
+      settings.push({ key: 'smtp_port', value: String(port) });
+    }
+    if (secure !== undefined) {
+      settings.push({ key: 'smtp_secure', value: secure ? 'true' : 'false' });
+    }
+    if (user !== undefined) {
+      settings.push({ key: 'smtp_user', value: user });
+    }
+    if (password !== undefined) {
+      // Encrypt password before storage
+      const encryptedPassword = encrypt(password);
+      settings.push({ key: 'smtp_password', value: encryptedPassword });
+    }
+    if (from !== undefined) {
+      settings.push({ key: 'smtp_from', value: from });
+    }
+    if (fromName !== undefined) {
+      settings.push({ key: 'smtp_from_name', value: fromName });
+    }
+
+    // Save all settings
+    for (const setting of settings) {
+      await execute(
+        'INSERT OR REPLACE INTO system_config (key, value) VALUES (?, ?)',
+        [setting.key, setting.value]
+      );
+    }
+
+    res.json({ message: 'SMTP settings updated successfully' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

@@ -11,6 +11,7 @@ import Tags from './pages/Tags';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import Shared from './pages/Shared';
+import PasswordReset from './pages/PasswordReset';
 import Layout from './components/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -97,6 +98,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+      <Route path="/reset-password" element={<PasswordReset />} />
+      <Route path="/password-reset" element={<PasswordReset />} />
       <Route
         path="/"
         element={

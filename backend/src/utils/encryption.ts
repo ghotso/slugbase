@@ -8,22 +8,29 @@ const KEY_LENGTH = 32;
 
 /**
  * Get encryption key from environment variable
- * If not set, generates a key (should be set in production!)
+ * ENCRYPTION_KEY is validated at startup via validateEnvironmentVariables()
+ * This will throw if not set, preventing insecure defaults
  */
 function getEncryptionKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
-    console.warn('WARNING: ENCRYPTION_KEY not set. Using a default key. This is insecure for production!');
-    // Generate a deterministic key from a default value (for development only)
-    return crypto.scryptSync('default-insecure-key-change-in-production', 'salt', KEY_LENGTH);
+    throw new Error('ENCRYPTION_KEY environment variable is required. Please set it before starting the server.');
   }
   
-  // If key is provided as hex string, convert it
+  // If key is provided as hex string (64 chars = 32 bytes), convert it
   if (key.length === 64) {
-    return Buffer.from(key, 'hex');
+    try {
+      return Buffer.from(key, 'hex');
+    } catch (error) {
+      throw new Error('ENCRYPTION_KEY must be a valid hex string (64 characters) or a string of at least 32 characters');
+    }
   }
   
   // Otherwise, derive key from the provided string
+  if (key.length < 32) {
+    throw new Error('ENCRYPTION_KEY must be at least 32 characters long');
+  }
+  
   return crypto.scryptSync(key, 'slugbase-salt', KEY_LENGTH);
 }
 

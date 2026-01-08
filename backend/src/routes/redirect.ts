@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { queryOne } from '../db/index.js';
+import { strictRateLimiter } from '../middleware/security.js';
+import { validateUrl } from '../utils/validation.js';
 
 const router = Router();
 
@@ -37,7 +39,7 @@ const router = Router();
  *         description: Bookmark not found or forwarding not enabled
  */
 // Redirect route: /{user_key}/{slug}
-router.get('/:user_key/:slug', async (req, res) => {
+router.get('/:user_key/:slug', strictRateLimiter, async (req, res) => {
   try {
     const { user_key, slug } = req.params;
 
@@ -52,9 +54,20 @@ router.get('/:user_key/:slug', async (req, res) => {
       return res.status(404).send('Not Found');
     }
 
+    const redirectUrl = (bookmark as any).url;
+
+    // Validate redirect URL to prevent open redirect vulnerabilities
+    const urlValidation = validateUrl(redirectUrl);
+    if (!urlValidation.valid) {
+      console.error('Invalid redirect URL detected:', redirectUrl);
+      return res.status(400).send('Invalid redirect URL');
+    }
+
     // Redirect with 302 (temporary redirect)
-    res.redirect(302, (bookmark as any).url);
+    res.redirect(302, redirectUrl);
   } catch (error: any) {
+    // Don't expose error details to client
+    console.error('Redirect error:', error);
     res.status(500).send('Internal Server Error');
   }
 });

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query, queryOne, execute } from '../db/index.js';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
+import { validateLength, sanitizeString, MAX_LENGTHS } from '../utils/validation.js';
 
 const router = Router();
 router.use(requireAuth());
@@ -146,14 +147,21 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    // Validate and sanitize name
+    const nameValidation = validateLength(name, 'Name', 1, MAX_LENGTHS.tagName);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+    const sanitizedName = sanitizeString(name);
+
     // Check if tag with same name exists
-    const existing = await queryOne('SELECT id FROM tags WHERE user_id = ? AND name = ?', [userId, name]);
+    const existing = await queryOne('SELECT id FROM tags WHERE user_id = ? AND name = ?', [userId, sanitizedName]);
     if (existing) {
       return res.status(400).json({ error: 'Tag with this name already exists' });
     }
 
     const tagId = uuidv4();
-    await execute('INSERT INTO tags (id, user_id, name) VALUES (?, ?, ?)', [tagId, userId, name]);
+    await execute('INSERT INTO tags (id, user_id, name) VALUES (?, ?, ?)', [tagId, userId, sanitizedName]);
 
     const tag = await queryOne('SELECT * FROM tags WHERE id = ?', [tagId]);
     res.status(201).json(tag);
@@ -219,13 +227,20 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Tag not found' });
     }
 
+    // Validate and sanitize name
+    const nameValidation = validateLength(name, 'Name', 1, MAX_LENGTHS.tagName);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+    const sanitizedName = sanitizeString(name);
+
     // Check if new name conflicts
-    const existing = await queryOne('SELECT id FROM tags WHERE user_id = ? AND name = ? AND id != ?', [userId, name, id]);
+    const existing = await queryOne('SELECT id FROM tags WHERE user_id = ? AND name = ? AND id != ?', [userId, sanitizedName, id]);
     if (existing) {
       return res.status(400).json({ error: 'Tag with this name already exists' });
     }
 
-    await execute('UPDATE tags SET name = ? WHERE id = ?', [name, id]);
+    await execute('UPDATE tags SET name = ? WHERE id = ?', [sanitizedName, id]);
     const updated = await queryOne('SELECT * FROM tags WHERE id = ?', [id]);
     res.json(updated);
   } catch (error: any) {

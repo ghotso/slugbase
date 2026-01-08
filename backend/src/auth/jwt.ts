@@ -3,7 +3,12 @@ import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import { queryOne } from '../db/index.js';
 import { extractTokenFromRequest } from '../utils/jwt.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'slugbase-jwt-secret-change-in-production';
+// JWT_SECRET is validated at startup via validateEnvironmentVariables()
+// This will throw if not set, preventing insecure defaults
+const JWT_SECRET = process.env.JWT_SECRET as string;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Please set it before starting the server.');
+}
 
 /**
  * Setup JWT strategy for Passport

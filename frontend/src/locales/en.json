@@ -16,6 +16,7 @@
     "emailPlaceholder": "your@email.com",
     "password": "Password",
     "passwordPlaceholder": "Enter your password",
+    "forgotPassword": "Forgot password?",
     "or": "Or continue with"
   },
   "setup": {
@@ -203,7 +204,49 @@
     "searchUsers": "Search users by name or email...",
     "noTeamsAvailable": "All teams are already assigned",
     "noUsersAvailable": "All users are already members",
-    "noSearchResults": "No results match your search"
+    "noSearchResults": "No results match your search",
+    "apiDocsNote": "API documentation is available as a standalone page",
+    "viewApiDocs": "View API Documentation"
+  },
+  "passwordReset": {
+    "title": "Reset Password",
+    "description": "Enter your email address to receive a password reset link",
+    "email": "Email",
+    "emailPlaceholder": "your@email.com",
+    "requestReset": "Send Reset Link",
+    "resetToken": "Reset Token",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "resetPassword": "Reset Password",
+    "requestSent": "If an account with this email exists, a password reset link has been sent.",
+    "resetSuccess": "Password reset successfully! You can now log in with your new password.",
+    "invalidToken": "Invalid or expired reset token",
+    "passwordMismatch": "Passwords do not match",
+    "backToLogin": "Back to Login"
+  },
+  "smtp": {
+    "title": "SMTP Email Configuration",
+    "description": "Configure SMTP settings for sending emails (e.g., password reset emails)",
+    "enabled": "Enable SMTP",
+    "host": "SMTP Host",
+    "hostPlaceholder": "smtp.gmail.com",
+    "port": "Port",
+    "portPlaceholder": "587",
+    "secure": "Use TLS/SSL",
+    "user": "Username/Email",
+    "userPlaceholder": "your-email@gmail.com",
+    "password": "Password",
+    "passwordPlaceholder": "SMTP password or app password",
+    "from": "From Email",
+    "fromPlaceholder": "noreply@example.com",
+    "fromName": "From Name",
+    "fromNamePlaceholder": "SlugBase",
+    "testEmail": "Test Email",
+    "testEmailPlaceholder": "test@example.com",
+    "sendTest": "Send Test Email",
+    "testSent": "Test email sent successfully!",
+    "testFailed": "Failed to send test email",
+    "save": "Save SMTP Settings"
   },
   "shared": {
     "title": "Shared",

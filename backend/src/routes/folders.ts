@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query, queryOne, execute } from '../db/index.js';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
+import { validateLength, sanitizeString, MAX_LENGTHS } from '../utils/validation.js';
 
 const router = Router();
 router.use(requireAuth());
@@ -266,8 +267,23 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    // Validate and sanitize name
+    const nameValidation = validateLength(name, 'Name', 1, MAX_LENGTHS.folderName);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+    const sanitizedName = sanitizeString(name);
+
+    // Validate icon length if provided
+    if (icon !== undefined && icon !== null) {
+      const iconValidation = validateLength(icon, 'Icon', 0, MAX_LENGTHS.icon);
+      if (!iconValidation.valid) {
+        return res.status(400).json({ error: iconValidation.error });
+      }
+    }
+
     // Check if folder with same name exists
-    const existing = await queryOne('SELECT id FROM folders WHERE user_id = ? AND name = ?', [userId, name]);
+    const existing = await queryOne('SELECT id FROM folders WHERE user_id = ? AND name = ?', [userId, sanitizedName]);
     if (existing) {
       return res.status(400).json({ error: 'Folder with this name already exists' });
     }
@@ -275,7 +291,7 @@ router.post('/', async (req, res) => {
     const folderId = uuidv4();
     const { team_ids, user_ids, share_all_teams } = req.body;
 
-    await execute('INSERT INTO folders (id, user_id, name, icon) VALUES (?, ?, ?, ?)', [folderId, userId, name, icon || null]);
+    await execute('INSERT INTO folders (id, user_id, name, icon) VALUES (?, ?, ?, ?)', [folderId, userId, sanitizedName, icon || null]);
 
     // Add team shares
     if (share_all_teams) {
@@ -403,15 +419,30 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Folder not found' });
     }
 
+    // Validate and sanitize name
+    const nameValidation = validateLength(name, 'Name', 1, MAX_LENGTHS.folderName);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+    const sanitizedName = sanitizeString(name);
+
+    // Validate icon length if provided
+    if (icon !== undefined && icon !== null) {
+      const iconValidation = validateLength(icon, 'Icon', 0, MAX_LENGTHS.icon);
+      if (!iconValidation.valid) {
+        return res.status(400).json({ error: iconValidation.error });
+      }
+    }
+
     // Check if new name conflicts
-    const existing = await queryOne('SELECT id FROM folders WHERE user_id = ? AND name = ? AND id != ?', [userId, name, id]);
+    const existing = await queryOne('SELECT id FROM folders WHERE user_id = ? AND name = ? AND id != ?', [userId, sanitizedName, id]);
     if (existing) {
       return res.status(400).json({ error: 'Folder with this name already exists' });
     }
 
     const { team_ids, user_ids, share_all_teams } = req.body;
 
-    await execute('UPDATE folders SET name = ?, icon = ? WHERE id = ?', [name, icon || null, id]);
+    await execute('UPDATE folders SET name = ?, icon = ? WHERE id = ?', [sanitizedName, icon || null, id]);
 
     // Update team shares if provided
     if (share_all_teams !== undefined || team_ids !== undefined) {

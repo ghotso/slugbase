@@ -1,8 +1,16 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { query, queryOne, execute } from '../../db/index.js';
 import { AuthRequest, requireAuth, requireAdmin } from '../../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
+import { validateEmail, normalizeEmail, validatePassword, validateLength, sanitizeString } from '../../utils/validation.js';
+
+function generateUserKey(): string {
+  // Use cryptographically secure random generation
+  // Generate 8 random bytes and convert to hex, take first 12 characters
+  return crypto.randomBytes(8).toString('hex').substring(0, 12);
+}
 
 const router = Router();
 router.use(requireAuth());
@@ -216,25 +224,42 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Email and name are required' });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
+    // Validate and normalize email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
+    }
+    const normalizedEmail = normalizeEmail(email);
+
+    // Validate name length
+    const nameValidation = validateLength(name, 'Name', 1, 255);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+    const sanitizedName = sanitizeString(name);
+
+    // Validate password if provided
+    if (password) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
+      }
     }
 
-    // Check if email already exists
-    const existingUser = await queryOne('SELECT id FROM users WHERE email = ?', [email]);
+    // Check if email already exists (use normalized email)
+    const existingUser = await queryOne('SELECT id FROM users WHERE email = ?', [normalizedEmail]);
     if (existingUser) {
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
     const userId = uuidv4();
-    const userKey = Math.random().toString(36).substring(2, 10);
+    const userKey = generateUserKey();
     let passwordHash = null;
 
     if (password) {
-      if (password.length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
       }
       passwordHash = await bcrypt.hash(password, 10);
     }
@@ -242,7 +267,7 @@ router.post('/', async (req, res) => {
     await execute(
       `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, email, name, userKey, passwordHash, is_admin]
+      [userId, normalizedEmail, sanitizedName, userKey, passwordHash, is_admin]
     );
 
     const user = await queryOne(
@@ -330,35 +355,38 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const updates: string[] = [];
+    const params: any[] = [];
+
     // Validate email if provided
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: 'Invalid email format' });
+    if (email !== undefined) {
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.valid) {
+        return res.status(400).json({ error: emailValidation.error });
       }
+      const normalizedEmail = normalizeEmail(email);
       // Check email uniqueness if changed
-      if (email !== (existing as any).email) {
-        const emailExists = await queryOne('SELECT id FROM users WHERE email = ? AND id != ?', [email, id]);
+      if (normalizedEmail !== (existing as any).email) {
+        const emailExists = await queryOne('SELECT id FROM users WHERE email = ? AND id != ?', [normalizedEmail, id]);
         if (emailExists) {
           return res.status(400).json({ error: 'User with this email already exists' });
         }
       }
-    }
-
-    const updates: string[] = [];
-    const params: any[] = [];
-
-    if (email !== undefined) {
       updates.push('email = ?');
-      params.push(email);
+      params.push(normalizedEmail);
     }
     if (name !== undefined) {
+      const nameValidation = validateLength(name, 'Name', 1, 255);
+      if (!nameValidation.valid) {
+        return res.status(400).json({ error: nameValidation.error });
+      }
       updates.push('name = ?');
-      params.push(name);
+      params.push(sanitizeString(name));
     }
-    if (password !== undefined) {
-      if (password.length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    if (password !== undefined && password !== null && password !== '') {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ error: passwordValidation.error });
       }
       updates.push('password_hash = ?');
       params.push(await bcrypt.hash(password, 10));

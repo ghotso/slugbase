@@ -3,6 +3,7 @@ import { query, queryOne, execute } from '../db/index.js';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import { CreateBookmarkInput, UpdateBookmarkInput } from '../types.js';
+import { validateUrl, validateSlug, validateLength, sanitizeString, MAX_LENGTHS } from '../utils/validation.js';
 
 const router = Router();
 router.use(requireAuth());
@@ -448,16 +449,35 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Validate and sanitize title
+    const titleValidation = validateLength(data.title, 'Title', 1, MAX_LENGTHS.title);
+    if (!titleValidation.valid) {
+      return res.status(400).json({ error: titleValidation.error });
+    }
+    const sanitizedTitle = sanitizeString(data.title);
+
+    // Validate URL
+    const urlValidation = validateUrl(data.url);
+    if (!urlValidation.valid) {
+      return res.status(400).json({ error: urlValidation.error });
+    }
+
     // Slug is required only if forwarding is enabled
     if (data.forwarding_enabled && !data.slug) {
       return res.status(400).json({ error: 'Slug is required when forwarding is enabled' });
     }
 
     // Slug can be null/empty if forwarding is disabled
-    const slug = data.slug && data.slug.trim() ? data.slug.trim() : null;
+    let slug = data.slug && data.slug.trim() ? data.slug.trim() : null;
     
-    // Check if slug is unique for user (only if provided)
+    // Validate slug format if provided
     if (slug) {
+      const slugValidation = validateSlug(slug);
+      if (!slugValidation.valid) {
+        return res.status(400).json({ error: slugValidation.error });
+      }
+      
+      // Check if slug is unique for user
       const existing = await queryOne(
         'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ?',
         [userId, slug]
@@ -472,7 +492,7 @@ router.post('/', async (req, res) => {
     await execute(
       `INSERT INTO bookmarks (id, user_id, title, url, slug, forwarding_enabled)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [bookmarkId, userId, data.title, data.url, slug, data.forwarding_enabled || false]
+      [bookmarkId, userId, sanitizedTitle, data.url, slug, data.forwarding_enabled || false]
     );
 
     // Add folders
@@ -660,6 +680,12 @@ router.put('/:id', async (req, res) => {
       // If slug is being set/changed, check uniqueness (only if slug is provided)
       const newSlug = data.slug && data.slug.trim() ? data.slug.trim() : null;
       if (newSlug) {
+        // Validate slug format
+        const slugValidation = validateSlug(newSlug);
+        if (!slugValidation.valid) {
+          return res.status(400).json({ error: slugValidation.error });
+        }
+        
         const slugExists = await queryOne(
           'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ? AND id != ?',
           [userId, newSlug, id]
@@ -670,13 +696,31 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Validate and sanitize title if provided
+    let sanitizedTitle = data.title;
+    if (data.title !== undefined) {
+      const titleValidation = validateLength(data.title, 'Title', 1, MAX_LENGTHS.title);
+      if (!titleValidation.valid) {
+        return res.status(400).json({ error: titleValidation.error });
+      }
+      sanitizedTitle = sanitizeString(data.title);
+    }
+
+    // Validate URL if provided
+    if (data.url !== undefined) {
+      const urlValidation = validateUrl(data.url);
+      if (!urlValidation.valid) {
+        return res.status(400).json({ error: urlValidation.error });
+      }
+    }
+
     // Update bookmark
     const updates: string[] = [];
     const params: any[] = [];
 
     if (data.title !== undefined) {
       updates.push('title = ?');
-      params.push(data.title);
+      params.push(sanitizedTitle);
     }
     if (data.url !== undefined) {
       updates.push('url = ?');

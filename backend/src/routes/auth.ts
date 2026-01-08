@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import passport from 'passport';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { query, queryOne, execute, isInitialized } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { reloadOIDCStrategies } from '../auth/oidc.js';
 import { generateToken } from '../utils/jwt.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { authRateLimiter, strictRateLimiter } from '../middleware/security.js';
+import { validateEmail, normalizeEmail, validatePassword, validateLength, sanitizeString } from '../utils/validation.js';
 
 const router = Router();
 
@@ -170,7 +173,7 @@ router.get('/me', requireAuth(), (req, res) => {
  *         description: Invalid credentials or account has no password set
  */
 // Local authentication (email/password)
-router.post('/login', async (req, res, next) => {
+router.post('/login', authRateLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -178,8 +181,15 @@ router.post('/login', async (req, res, next) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Find user by email
-    const user = await queryOne('SELECT * FROM users WHERE email = ?', [email]);
+    // Validate and normalize email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
+    }
+    const normalizedEmail = normalizeEmail(email);
+
+    // Find user by email (use normalized email)
+    const user = await queryOne('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -209,7 +219,7 @@ router.post('/login', async (req, res, next) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      sameSite: 'strict', // Always use strict for CSRF protection
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -248,10 +258,11 @@ router.post('/login', async (req, res, next) => {
  */
 router.post('/logout', (req, res) => {
   // Clear JWT cookie
+  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    secure: isProduction,
+    sameSite: 'strict', // Always use strict for CSRF protection
   });
   res.json({ message: 'Logged out' });
 });
@@ -334,7 +345,7 @@ router.get('/:provider/callback', (req, res, next) => {
     res.cookie('token', token, {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      sameSite: 'strict', // Always use strict for CSRF protection
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -389,7 +400,7 @@ router.get('/:provider/callback', (req, res, next) => {
  *         description: System already initialized
  */
 // Setup route - only accessible when system is not initialized
-router.post('/setup', async (req, res) => {
+router.post('/setup', strictRateLimiter, async (req, res) => {
   try {
     const initialized = await isInitialized();
     if (initialized) {
@@ -402,19 +413,28 @@ router.post('/setup', async (req, res) => {
       return res.status(400).json({ error: 'Email, name, and password are required' });
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
+    // Validate and normalize email
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: emailValidation.error });
+    }
+    const normalizedEmail = normalizeEmail(email);
+
+    // Validate name length
+    const nameValidation = validateLength(name, 'Name', 1, 255);
+    if (!nameValidation.valid) {
+      return res.status(400).json({ error: nameValidation.error });
+    }
+    const sanitizedName = sanitizeString(name);
+
+    // Validate password complexity
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({ error: passwordValidation.error });
     }
 
-    // Validate password length
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
-    }
-
-    // Check if email already exists
-    const existingUser = await queryOne('SELECT id FROM users WHERE email = ?', [email]);
+    // Check if email already exists (use normalized email)
+    const existingUser = await queryOne('SELECT id FROM users WHERE email = ?', [normalizedEmail]);
     if (existingUser) {
       return res.status(400).json({ error: 'User with this email already exists' });
     }
@@ -429,7 +449,7 @@ router.post('/setup', async (req, res) => {
     await execute(
       `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, email, name, userKey, passwordHash, true] // First user is always admin
+      [userId, normalizedEmail, sanitizedName, userKey, passwordHash, true] // First user is always admin
     );
 
     res.json({ message: 'Setup completed successfully. You can now log in.' });
@@ -443,7 +463,9 @@ router.post('/setup', async (req, res) => {
 });
 
 function generateUserKey(): string {
-  return Math.random().toString(36).substring(2, 10);
+  // Use cryptographically secure random generation
+  // Generate 8 random bytes and convert to hex, take first 12 characters
+  return crypto.randomBytes(8).toString('hex').substring(0, 12);
 }
 
 /**

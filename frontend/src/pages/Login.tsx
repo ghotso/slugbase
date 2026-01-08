@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 import { LogIn, Key } from 'lucide-react';
@@ -110,6 +110,14 @@ export default function Login() {
             >
               {localLoading ? t('common.loading') : t('auth.login')}
             </Button>
+            <div className="text-center">
+              <Link
+                to="/password-reset"
+                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+              >
+                {t('auth.forgotPassword')}
+              </Link>
+            </div>
           </form>
 
           {/* OIDC Providers */}
