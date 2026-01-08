@@ -335,10 +335,16 @@ router.post('/smtp', async (req, res) => {
     if (user !== undefined) {
       settings.push({ key: 'smtp_user', value: user });
     }
-    if (password !== undefined) {
+    if (password !== undefined && password !== null && password.trim() !== '') {
+      // Only save password if it's not empty
       // Encrypt password before storage
-      const encryptedPassword = encrypt(password);
+      const encryptedPassword = encrypt(password.trim());
       settings.push({ key: 'smtp_password', value: encryptedPassword });
+      console.log('SMTP password saved (encrypted, length:', encryptedPassword.length, ')');
+    } else if (password !== undefined) {
+      // If password is explicitly set to empty string, don't save it
+      // This allows updating other settings without changing the password
+      console.log('SMTP password not updated (empty or unchanged)');
     }
     if (from !== undefined) {
       settings.push({ key: 'smtp_from', value: from });

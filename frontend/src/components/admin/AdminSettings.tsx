@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/client';
+import { useToast } from '../ui/Toast';
 import { Save, Plus, Trash2, Settings as SettingsIcon, Mail, Send } from 'lucide-react';
 import Button from '../ui/Button';
 import ConfirmDialog from '../ui/ConfirmDialog';
@@ -11,6 +12,7 @@ export default function AdminSettings() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { showConfirm, dialogState } = useConfirmDialog();
+  const { showToast } = useToast();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [newKey, setNewKey] = useState('');
@@ -61,8 +63,9 @@ export default function AdminSettings() {
     try {
       await api.post('/admin/settings', { key, value });
       setSettings({ ...settings, [key]: value });
+      showToast(t('common.success'), 'success');
     } catch (error: any) {
-      alert(error.response?.data?.error || t('common.error'));
+      showToast(error.response?.data?.error || t('common.error'), 'error');
     }
   };
 
@@ -74,8 +77,9 @@ export default function AdminSettings() {
       setSettings({ ...settings, [newKey]: newValue });
       setNewKey('');
       setNewValue('');
+      showToast(t('common.success'), 'success');
     } catch (error: any) {
-      alert(error.response?.data?.error || t('common.error'));
+      showToast(error.response?.data?.error || t('common.error'), 'error');
     }
   };
 
@@ -89,8 +93,9 @@ export default function AdminSettings() {
           const newSettings = { ...settings };
           delete newSettings[key];
           setSettings(newSettings);
+          showToast(t('common.success'), 'success');
         } catch (error: any) {
-          alert(error.response?.data?.error || t('common.error'));
+          showToast(error.response?.data?.error || t('common.error'), 'error');
         }
       },
       { variant: 'danger', confirmText: t('common.delete'), cancelText: t('common.cancel') }
@@ -100,24 +105,24 @@ export default function AdminSettings() {
   const handleSMTPSave = async () => {
     try {
       await api.post('/admin/settings/smtp', smtpSettings);
-      alert(t('common.success'));
+      showToast(t('common.success'), 'success');
       await loadSettings();
     } catch (error: any) {
-      alert(error.response?.data?.error || t('common.error'));
+      showToast(error.response?.data?.error || t('common.error'), 'error');
     }
   };
 
   const handleTestEmail = async () => {
     if (!user?.email) {
-      alert(t('admin.noUserEmailAvailable'));
+      showToast(t('admin.noUserEmailAvailable'), 'warning');
       return;
     }
     setTestingEmail(true);
     try {
       await api.post('/admin/settings/smtp/test', { email: user.email });
-      alert(t('smtp.testSent'));
+      showToast(t('smtp.testSent'), 'success');
     } catch (error: any) {
-      alert(error.response?.data?.error || t('smtp.testFailed'));
+      showToast(error.response?.data?.error || t('smtp.testFailed'), 'error');
     } finally {
       setTestingEmail(false);
     }

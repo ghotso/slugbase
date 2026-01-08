@@ -8,7 +8,7 @@ interface SMTPConfig {
   secure: boolean;
   auth: {
     user: string;
-    password: string;
+    password: string; // Internal use, will be converted to 'pass' for nodemailer
   };
   from: string;
   fromName: string;
@@ -16,12 +16,13 @@ interface SMTPConfig {
 
 /**
  * Get SMTP configuration from system settings
+ * Returns config object or null with error message
  */
-async function getSMTPConfig(): Promise<SMTPConfig | null> {
+async function getSMTPConfig(): Promise<{ config: SMTPConfig | null; error?: string }> {
   try {
     const enabled = await queryOne('SELECT value FROM system_config WHERE key = ?', ['smtp_enabled']);
     if (!enabled || (enabled as any).value !== 'true') {
-      return null; // SMTP not enabled
+      return { config: null, error: 'SMTP is not enabled' };
     }
 
     const host = await queryOne('SELECT value FROM system_config WHERE key = ?', ['smtp_host']);
@@ -32,54 +33,113 @@ async function getSMTPConfig(): Promise<SMTPConfig | null> {
     const from = await queryOne('SELECT value FROM system_config WHERE key = ?', ['smtp_from']);
     const fromName = await queryOne('SELECT value FROM system_config WHERE key = ?', ['smtp_from_name']);
 
-    if (!host || !port || !user || !password || !from) {
-      return null; // Missing required settings
-    }
+    if (!host) return { config: null, error: 'SMTP host is not configured' };
+    if (!port) return { config: null, error: 'SMTP port is not configured' };
+    if (!user) return { config: null, error: 'SMTP user is not configured' };
+    if (!password) return { config: null, error: 'SMTP password is not configured' };
+    if (!from) return { config: null, error: 'SMTP from email is not configured' };
+
+    const hostValue = String((host as any).value).trim();
+    const userValue = String((user as any).value).trim();
+    const passwordValue = String((password as any).value).trim();
+    const fromValue = String((from as any).value).trim();
+
+    // Check if required values are non-empty
+    if (!hostValue) return { config: null, error: 'SMTP host is empty' };
+    if (!userValue) return { config: null, error: 'SMTP user is empty' };
+    if (!passwordValue) return { config: null, error: 'SMTP password is empty' };
+    if (!fromValue) return { config: null, error: 'SMTP from email is empty' };
 
     // Decrypt password if it's encrypted
-    let decryptedPassword = (password as any).value;
+    let decryptedPassword = passwordValue;
     try {
       // Try to decrypt (will return original if not encrypted)
-      decryptedPassword = decrypt(decryptedPassword);
-    } catch {
+      decryptedPassword = decrypt(passwordValue);
+      // If decryption returns the same value, it might not have been encrypted
+      // This is fine, we'll use it as-is
+    } catch (error: any) {
       // If decryption fails, use as-is (plain text)
-      decryptedPassword = (password as any).value;
+      console.warn('SMTP password decryption failed, using as plain text:', error.message);
+      decryptedPassword = passwordValue;
     }
 
+    // Ensure decrypted password is not empty
+    const trimmedPassword = decryptedPassword ? decryptedPassword.trim() : '';
+    if (!trimmedPassword) {
+      console.error('SMTP password is empty. Original value length:', passwordValue.length);
+      return { config: null, error: 'SMTP password is empty. Please set a password in the SMTP settings.' };
+    }
+
+    // Log for debugging (but don't log the actual password)
+    console.log('SMTP config loaded successfully. Password length:', trimmedPassword.length);
+
     return {
-      host: String((host as any).value),
-      port: parseInt(String((port as any).value)) || 587,
-      secure: (secure as any)?.value === 'true' || false,
-      auth: {
-        user: String((user as any).value),
-        password: String(decryptedPassword),
+      config: {
+        host: hostValue,
+        port: parseInt(String((port as any).value)) || 587,
+        secure: (secure as any)?.value === 'true' || false,
+        auth: {
+          user: userValue,
+          password: trimmedPassword,
+        },
+        from: fromValue,
+        fromName: String((fromName as any)?.value || 'SlugBase'),
       },
-      from: String((from as any).value),
-      fromName: String((fromName as any)?.value || 'SlugBase'),
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting SMTP config:', error);
-    return null;
+    return { config: null, error: `Error retrieving SMTP config: ${error.message}` };
   }
 }
 
 /**
  * Send email using configured SMTP settings
  */
-export async function sendEmail(to: string, subject: string, html: string, text?: string): Promise<boolean> {
+export async function sendEmail(to: string, subject: string, html: string, text?: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const config = await getSMTPConfig();
+    const { config, error } = await getSMTPConfig();
     if (!config) {
-      console.error('SMTP not configured or not enabled');
-      return false;
+      return { success: false, error: error || 'SMTP not configured or not enabled' };
     }
 
-    const transporter = nodemailer.createTransport({
+    // Validate auth credentials before creating transporter
+    if (!config.auth || !config.auth.user || !config.auth.password) {
+      return { success: false, error: 'SMTP auth credentials are missing' };
+    }
+
+    const authUser = config.auth.user.trim();
+    const authPassword = config.auth.password.trim();
+
+    if (!authUser || !authPassword) {
+      console.error('SMTP auth validation failed:', {
+        userLength: authUser.length,
+        passwordLength: authPassword.length,
+        userEmpty: !authUser,
+        passwordEmpty: !authPassword,
+      });
+      return { success: false, error: 'SMTP auth credentials are empty' };
+    }
+
+    // Create transporter with auth
+    const transportConfig = {
       host: config.host,
       port: config.port,
       secure: config.secure,
-      auth: config.auth,
+      auth: {
+        user: authUser,
+        pass: authPassword, // nodemailer uses 'pass' not 'password'
+      },
+    };
+
+    console.log('Creating SMTP transporter with:', {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      user: authUser,
+      passwordLength: authPassword.length,
     });
+
+    const transporter = nodemailer.createTransport(transportConfig);
 
     const info = await transporter.sendMail({
       from: `"${config.fromName}" <${config.from}>`,
@@ -90,10 +150,10 @@ export async function sendEmail(to: string, subject: string, html: string, text?
     });
 
     console.log('Email sent:', info.messageId);
-    return true;
-  } catch (error) {
+    return { success: true };
+  } catch (error: any) {
     console.error('Error sending email:', error);
-    return false;
+    return { success: false, error: error.message || 'Unknown error sending email' };
   }
 }
 
@@ -103,38 +163,81 @@ export async function sendEmail(to: string, subject: string, html: string, text?
 export async function sendPasswordResetEmail(email: string, resetToken: string, resetUrl: string): Promise<boolean> {
   const subject = 'Password Reset Request - SlugBase';
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; }
-        .button:hover { background-color: #0056b3; }
-        .footer { margin-top: 30px; font-size: 12px; color: #666; }
-        .warning { color: #d32f2f; font-weight: bold; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>Password Reset Request</h1>
-        <p>You requested to reset your password for your SlugBase account.</p>
-        <p>Click the button below to reset your password:</p>
-        <a href="${resetUrl}" class="button">Reset Password</a>
-        <p>Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all;">${resetUrl}</p>
-        <p class="warning">This link will expire in 1 hour.</p>
-        <p>If you did not request a password reset, please ignore this email.</p>
-        <div class="footer">
-          <p>This is an automated message from SlugBase. Please do not reply to this email.</p>
-        </div>
-      </div>
-    </body>
-    </html>
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Password Reset Request</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">SlugBase</h1>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a1a; font-size: 24px; font-weight: 600; line-height: 1.3;">Password Reset Request</h2>
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">You requested to reset your password for your SlugBase account. Click the button below to create a new password:</p>
+              
+              <!-- Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 30px 0;">
+                <tr>
+                  <td align="center" style="padding: 0;">
+                    <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background-color: #667eea; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; text-align: center; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">Reset Password</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">Or copy and paste this link into your browser:</p>
+              <p style="margin: 0 0 30px; padding: 12px; background-color: #f9fafb; border-radius: 4px; word-break: break-all; color: #4a4a4a; font-size: 13px; font-family: 'Courier New', monospace; line-height: 1.5;">${resetUrl}</p>
+              
+              <!-- Warning -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6; font-weight: 500;">⚠️ This link will expire in 1 hour for security reasons.</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
+              <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.6; text-align: center;">This is an automated message from SlugBase. Please do not reply to this email.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
   `;
 
-  return await sendEmail(email, subject, html);
+  const result = await sendEmail(email, subject, html);
+  return result.success;
 }
 
 /**
@@ -142,31 +245,111 @@ export async function sendPasswordResetEmail(email: string, resetToken: string, 
  */
 export async function testSMTPConfig(testEmail: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const config = await getSMTPConfig();
+    const { config, error } = await getSMTPConfig();
     if (!config) {
-      return { success: false, error: 'SMTP not configured or not enabled' };
+      return { success: false, error: error || 'SMTP not configured or not enabled' };
     }
 
     const subject = 'SMTP Test Email - SlugBase';
+    const sentDate = new Date().toLocaleString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+    
     const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-      </head>
-      <body>
-        <h1>SMTP Configuration Test</h1>
-        <p>If you received this email, your SMTP configuration is working correctly!</p>
-        <p>Sent at: ${new Date().toISOString()}</p>
-      </body>
-      </html>
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>SMTP Test Email</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">SlugBase</h1>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 30px; background-color: #d1fae5; border-left: 4px solid #10b981; border-radius: 4px;">
+                <tr>
+                  <td style="padding: 20px; text-align: center;">
+                    <p style="margin: 0; color: #065f46; font-size: 48px; line-height: 1;">✓</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <h2 style="margin: 0 0 20px; color: #1a1a1a; font-size: 24px; font-weight: 600; line-height: 1.3; text-align: center;">SMTP Configuration Test</h2>
+              <p style="margin: 0 0 30px; color: #4a4a4a; font-size: 16px; line-height: 1.6; text-align: center;">If you received this email, your SMTP configuration is working correctly!</p>
+              
+              <!-- Info Box -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0; background-color: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td style="padding: 0 0 12px; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Test Details</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 0 0 8px; color: #1a1a1a; font-size: 14px; line-height: 1.6;">
+                          <strong style="color: #4a4a4a;">Sent at:</strong> ${sentDate}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 0; color: #1a1a1a; font-size: 14px; line-height: 1.6;">
+                          <strong style="color: #4a4a4a;">Recipient:</strong> ${testEmail}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6; text-align: center;">Your email server is properly configured and ready to send emails from SlugBase.</p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
+              <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.6; text-align: center;">This is a test email from SlugBase. Your SMTP configuration is working correctly.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `;
 
-    const success = await sendEmail(testEmail, subject, html);
-    if (success) {
+    const result = await sendEmail(testEmail, subject, html);
+    if (result.success) {
       return { success: true };
     } else {
-      return { success: false, error: 'Failed to send test email' };
+      return { success: false, error: result.error || 'Failed to send test email' };
     }
   } catch (error: any) {
     return { success: false, error: error.message || 'Unknown error' };
