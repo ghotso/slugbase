@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "SlugBase",
+    "tagline": "Your links. Your structure. Your language. Your rules."
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "loginWith": "Login with {{provider}}",
+    "notAuthenticated": "Not authenticated",
+    "authFailed": "Authentication failed"
+  },
+  "setup": {
+    "title": "Initial Setup",
+    "description": "Welcome to SlugBase! Let's configure your first OIDC provider.",
+    "providerKey": "Provider Key",
+    "providerKeyPlaceholder": "e.g., google, github",
+    "clientId": "Client ID",
+    "clientSecret": "Client Secret",
+    "issuerUrl": "Issuer URL",
+    "scopes": "Scopes",
+    "scopesPlaceholder": "openid profile email",
+    "submit": "Complete Setup",
+    "alreadyInitialized": "System already initialized",
+    "success": "Setup completed successfully!",
+    "redirecting": "Redirecting..."
+  },
+  "bookmarks": {
+    "title": "Bookmarks",
+    "create": "Create Bookmark",
+    "edit": "Edit Bookmark",
+    "delete": "Delete Bookmark",
+    "name": "Title",
+    "url": "URL",
+    "slug": "Slug",
+    "forwardingEnabled": "Enable Forwarding",
+    "forwardingUrl": "Forwarding URL",
+    "copyUrl": "Copy URL",
+    "copied": "Copied!",
+    "folder": "Folder",
+    "tags": "Tags",
+    "noFolder": "No Folder",
+    "noTags": "No Tags",
+    "save": "Save",
+    "cancel": "Cancel",
+    "deleteConfirm": "Are you sure you want to delete this bookmark?",
+    "empty": "No bookmarks yet. Create your first one!",
+    "filterByFolder": "Filter by Folder",
+    "filterByTag": "Filter by Tag",
+    "allFolders": "All Folders",
+    "allTags": "All Tags",
+    "open": "Open"
+  },
+  "folders": {
+    "title": "Folders",
+    "create": "Create Folder",
+    "edit": "Edit Folder",
+    "delete": "Delete Folder",
+    "name": "Folder Name",
+    "empty": "No folders yet",
+    "deleteConfirm": "Are you sure you want to delete this folder?"
+  },
+  "tags": {
+    "title": "Tags",
+    "create": "Create Tag",
+    "edit": "Edit Tag",
+    "delete": "Delete Tag",
+    "name": "Tag Name",
+    "empty": "No tags yet",
+    "deleteConfirm": "Are you sure you want to delete this tag?"
+  },
+  "profile": {
+    "title": "Profile",
+    "userKey": "User Key",
+    "email": "Email",
+    "name": "Name",
+    "language": "Language",
+    "theme": "Theme",
+    "themeAuto": "Auto",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "save": "Save Settings",
+    "languageEnglish": "English",
+    "languageGerman": "Deutsch",
+    "languageFrench": "Français"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "dashboard": {
+    "bookmarksDescription": "Manage your bookmarks",
+    "foldersDescription": "Organize with folders",
+    "tagsDescription": "Tag your bookmarks"
+  }
+}

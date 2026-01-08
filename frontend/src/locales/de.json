@@ -1,0 +1,103 @@
+{
+  "app": {
+    "name": "SlugBase",
+    "tagline": "Ihre Links. Ihre Struktur. Ihre Sprache. Ihre Regeln."
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "loginWith": "Anmelden mit {{provider}}",
+    "notAuthenticated": "Nicht authentifiziert",
+    "authFailed": "Authentifizierung fehlgeschlagen"
+  },
+  "setup": {
+    "title": "Ersteinrichtung",
+    "description": "Willkommen bei SlugBase! Lassen Sie uns Ihren ersten OIDC-Provider konfigurieren.",
+    "providerKey": "Provider-Schlüssel",
+    "providerKeyPlaceholder": "z.B. google, github",
+    "clientId": "Client-ID",
+    "clientSecret": "Client-Geheimnis",
+    "issuerUrl": "Issuer-URL",
+    "scopes": "Bereiche",
+    "scopesPlaceholder": "openid profile email",
+    "submit": "Einrichtung abschließen",
+    "alreadyInitialized": "System bereits initialisiert",
+    "success": "Einrichtung erfolgreich abgeschlossen!",
+    "redirecting": "Weiterleitung..."
+  },
+  "bookmarks": {
+    "title": "Lesezeichen",
+    "create": "Lesezeichen erstellen",
+    "edit": "Lesezeichen bearbeiten",
+    "delete": "Lesezeichen löschen",
+    "name": "Titel",
+    "url": "URL",
+    "slug": "Slug",
+    "forwardingEnabled": "Weiterleitung aktivieren",
+    "forwardingUrl": "Weiterleitungs-URL",
+    "copyUrl": "URL kopieren",
+    "copied": "Kopiert!",
+    "folder": "Ordner",
+    "tags": "Tags",
+    "noFolder": "Kein Ordner",
+    "noTags": "Keine Tags",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "deleteConfirm": "Möchten Sie dieses Lesezeichen wirklich löschen?",
+    "empty": "Noch keine Lesezeichen. Erstellen Sie Ihr erstes!",
+    "filterByFolder": "Nach Ordner filtern",
+    "filterByTag": "Nach Tag filtern",
+    "allFolders": "Alle Ordner",
+    "allTags": "Alle Tags",
+    "open": "Öffnen"
+  },
+  "folders": {
+    "title": "Ordner",
+    "create": "Ordner erstellen",
+    "edit": "Ordner bearbeiten",
+    "delete": "Ordner löschen",
+    "name": "Ordnername",
+    "empty": "Noch keine Ordner",
+    "deleteConfirm": "Möchten Sie diesen Ordner wirklich löschen?"
+  },
+  "tags": {
+    "title": "Tags",
+    "create": "Tag erstellen",
+    "edit": "Tag bearbeiten",
+    "delete": "Tag löschen",
+    "name": "Tag-Name",
+    "empty": "Noch keine Tags",
+    "deleteConfirm": "Möchten Sie dieses Tag wirklich löschen?"
+  },
+  "profile": {
+    "title": "Profil",
+    "userKey": "Benutzerschlüssel",
+    "email": "E-Mail",
+    "name": "Name",
+    "language": "Sprache",
+    "theme": "Design",
+    "themeAuto": "Automatisch",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
+    "save": "Einstellungen speichern",
+    "languageEnglish": "Englisch",
+    "languageGerman": "Deutsch",
+    "languageFrench": "Französisch"
+  },
+  "common": {
+    "loading": "Lädt...",
+    "error": "Ein Fehler ist aufgetreten",
+    "success": "Erfolg",
+    "close": "Schließen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "save": "Speichern",
+    "cancel": "Abbrechen"
+  },
+  "dashboard": {
+    "bookmarksDescription": "Verwalten Sie Ihre Lesezeichen",
+    "foldersDescription": "Organisieren Sie mit Ordnern",
+    "tagsDescription": "Markieren Sie Ihre Lesezeichen"
+  }
+}

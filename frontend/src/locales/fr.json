@@ -1,0 +1,93 @@
+{
+  "app": {
+    "name": "SlugBase",
+    "tagline": "Vos liens. Votre structure. Votre langue. Vos règles."
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "loginWith": "Se connecter avec {{provider}}",
+    "notAuthenticated": "Non authentifié",
+    "authFailed": "Échec de l'authentification"
+  },
+  "setup": {
+    "title": "Configuration initiale",
+    "description": "Bienvenue dans SlugBase ! Configurons votre premier fournisseur OIDC.",
+    "providerKey": "Clé du fournisseur",
+    "providerKeyPlaceholder": "ex: google, github",
+    "clientId": "ID client",
+    "clientSecret": "Secret client",
+    "issuerUrl": "URL de l'émetteur",
+    "scopes": "Portées",
+    "scopesPlaceholder": "openid profile email",
+    "submit": "Terminer la configuration",
+    "alreadyInitialized": "Système déjà initialisé",
+    "success": "Configuration terminée avec succès !"
+  },
+  "bookmarks": {
+    "title": "Favoris",
+    "create": "Créer un favori",
+    "edit": "Modifier le favori",
+    "delete": "Supprimer le favori",
+    "name": "Titre",
+    "url": "URL",
+    "slug": "Slug",
+    "forwardingEnabled": "Activer la redirection",
+    "forwardingUrl": "URL de redirection",
+    "copyUrl": "Copier l'URL",
+    "copied": "Copié !",
+    "folder": "Dossier",
+    "tags": "Tags",
+    "noFolder": "Aucun dossier",
+    "noTags": "Aucun tag",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce favori ?",
+    "empty": "Aucun favori pour le moment. Créez votre premier !",
+    "filterByFolder": "Filtrer par dossier",
+    "filterByTag": "Filtrer par tag",
+    "allFolders": "Tous les dossiers",
+    "allTags": "Tous les tags"
+  },
+  "folders": {
+    "title": "Dossiers",
+    "create": "Créer un dossier",
+    "edit": "Modifier le dossier",
+    "delete": "Supprimer le dossier",
+    "name": "Nom du dossier",
+    "empty": "Aucun dossier pour le moment",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce dossier ?"
+  },
+  "tags": {
+    "title": "Tags",
+    "create": "Créer un tag",
+    "edit": "Modifier le tag",
+    "delete": "Supprimer le tag",
+    "name": "Nom du tag",
+    "empty": "Aucun tag pour le moment",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce tag ?"
+  },
+  "profile": {
+    "title": "Profil",
+    "userKey": "Clé utilisateur",
+    "email": "E-mail",
+    "name": "Nom",
+    "language": "Langue",
+    "theme": "Thème",
+    "themeAuto": "Automatique",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "save": "Enregistrer les paramètres"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "success": "Succès",
+    "close": "Fermer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "save": "Enregistrer",
+    "cancel": "Annuler"
+  }
+}

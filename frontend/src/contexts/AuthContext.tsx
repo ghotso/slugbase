@@ -1,0 +1,104 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../api/client';
+import { useTranslation } from 'react-i18next';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  user_key: string;
+  is_admin: boolean;
+  language: string;
+  theme: string;
+}
+
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  login: (provider: string) => void;
+  logout: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      i18n.changeLanguage(user.language);
+      applyTheme(user.theme);
+    }
+  }, [user, i18n]);
+
+  async function checkAuth() {
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function login(provider: string) {
+    window.location.href = `/api/auth/${provider}`;
+  }
+
+  async function logout() {
+    try {
+      await api.post('/auth/logout');
+      setUser(null);
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  }
+
+  async function updateUser(updates: Partial<User>) {
+    try {
+      const response = await api.put('/users/me', updates);
+      setUser(response.data);
+      if (updates.language) {
+        i18n.changeLanguage(updates.language);
+      }
+      if (updates.theme) {
+        applyTheme(updates.theme);
+      }
+    } catch (error) {
+      console.error('Update user error:', error);
+      throw error;
+    }
+  }
+
+  function applyTheme(theme: string) {
+    const root = document.documentElement;
+    if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}

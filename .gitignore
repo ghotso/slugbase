@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+.DS_Store
+*.db
+*.db-journal
+.vscode/
+.idea/
+
+# Data directory
+backend/data/
