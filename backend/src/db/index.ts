@@ -51,8 +51,8 @@ export async function initDatabase() {
     const pool = db as Pool;
     // Convert to PostgreSQL-compatible syntax
     schema = schema
-      .replace(/VARCHAR\((\d+)\)/g, 'VARCHAR($1)')
-      .replace(/TIMESTAMP DEFAULT CURRENT_TIMESTAMP/g, 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+      .replace(/VARCHAR\((\d+)\)/g, 'VARCHAR($1)');
+    // Note: TIMESTAMP DEFAULT CURRENT_TIMESTAMP is already PostgreSQL-compatible, no replacement needed
     
     // Split schema by semicolons and execute each statement
     const statements = schema.split(';').filter((s: string) => s.trim().length > 0);
