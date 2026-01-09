@@ -1,0 +1,51 @@
+version: '3.8'
+
+# Example Docker Compose configuration for SlugBase
+# Copy this file to docker-compose.yml and update the .env file with your values
+
+services:
+  slugbase:
+    build: .
+    ports:
+      - "${PORT:-5000}:5000"
+    env_file:
+      - .env
+    environment:
+      # Override DB_PATH to use container path (required for SQLite)
+      - DB_PATH=/app/data/slugbase.db
+    volumes:
+      # Mount data directory to persist SQLite database
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+  # Optional PostgreSQL service (uncomment if using PostgreSQL instead of SQLite)
+  # slugbase-postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     - POSTGRES_DB=${DB_NAME:-slugbase}
+  #     - POSTGRES_USER=${DB_USER:-slugbase}
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD:-change-this-password}
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-slugbase}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  # 
+  # If using PostgreSQL, update the slugbase service:
+  # slugbase:
+  #   ...
+  #   depends_on:
+  #     slugbase-postgres:
+  #       condition: service_healthy
+
+# volumes:
+#   postgres-data:
