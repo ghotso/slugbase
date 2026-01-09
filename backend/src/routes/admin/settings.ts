@@ -44,7 +44,12 @@ router.get('/', async (req, res) => {
     // Convert array to object
     const settingsObj: Record<string, string> = {};
     settingsList.forEach((setting: any) => {
-      settingsObj[setting.key] = setting.value;
+      // Don't expose the actual password value, just indicate if it's set
+      if (setting.key === 'smtp_password') {
+        settingsObj[setting.key] = setting.value ? '***SET***' : '';
+      } else {
+        settingsObj[setting.key] = setting.value;
+      }
     });
     
     res.json(settingsObj);

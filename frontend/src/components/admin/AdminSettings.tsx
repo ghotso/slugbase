@@ -29,6 +29,7 @@ export default function AdminSettings() {
     from: '',
     fromName: 'SlugBase',
   });
+  const [passwordIsSet, setPasswordIsSet] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => {
@@ -42,13 +43,17 @@ export default function AdminSettings() {
       setSettings(allSettings);
 
       // Load SMTP settings
+      // Check if password is set (backend returns '***SET***' if password exists)
+      const hasPassword = allSettings.smtp_password === '***SET***';
+      setPasswordIsSet(hasPassword);
+      
       setSmtpSettings({
         enabled: allSettings.smtp_enabled === 'true',
         host: allSettings.smtp_host || '',
         port: parseInt(allSettings.smtp_port || '587'),
         secure: allSettings.smtp_secure === 'true',
         user: allSettings.smtp_user || '',
-        password: '', // Don't load password for security
+        password: hasPassword ? '••••••••••••••••' : '', // Show masked password if set, empty if not
         from: allSettings.smtp_from || '',
         fromName: allSettings.smtp_from_name || 'SlugBase',
       });
@@ -104,7 +109,14 @@ export default function AdminSettings() {
 
   const handleSMTPSave = async () => {
     try {
-      await api.post('/admin/settings/smtp', smtpSettings);
+      // If password field contains the masked string, don't send it (keep existing password)
+      const settingsToSave: any = { ...smtpSettings };
+      if (settingsToSave.password === '••••••••••••••••') {
+        // Password is masked, don't send it to keep existing password
+        delete settingsToSave.password;
+      }
+      
+      await api.post('/admin/settings/smtp', settingsToSave);
       showToast(t('common.success'), 'success');
       await loadSettings();
     } catch (error: any) {
@@ -215,12 +227,32 @@ export default function AdminSettings() {
                   <input
                     type="password"
                     className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder={t('smtp.passwordPlaceholder')}
+                    placeholder={passwordIsSet ? t('smtp.passwordPlaceholder') : t('smtp.passwordPlaceholder')}
                     value={smtpSettings.password}
-                    onChange={(e) => setSmtpSettings({ ...smtpSettings, password: e.target.value })}
+                    onChange={(e) => {
+                      // If user starts typing, clear the masked password
+                      const newValue = e.target.value;
+                      if (passwordIsSet && smtpSettings.password === '••••••••••••••••' && newValue.length > 0) {
+                        // User is typing, clear the masked value
+                        setSmtpSettings({ ...smtpSettings, password: newValue });
+                        setPasswordIsSet(false);
+                      } else {
+                        setSmtpSettings({ ...smtpSettings, password: newValue });
+                        if (newValue.length > 0) {
+                          setPasswordIsSet(true);
+                        }
+                      }
+                    }}
+                    onFocus={() => {
+                      // Clear masked password when field is focused
+                      if (smtpSettings.password === '••••••••••••••••') {
+                        setSmtpSettings({ ...smtpSettings, password: '' });
+                        setPasswordIsSet(false);
+                      }
+                    }}
                   />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {t('admin.leaveBlank')}
+                    {passwordIsSet ? t('smtp.passwordChangeHint') : t('admin.leaveBlank')}
                   </p>
                 </div>
                 <div>

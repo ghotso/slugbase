@@ -2,7 +2,7 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 COPY frontend/ .
 RUN npm run build
 
@@ -10,7 +10,7 @@ RUN npm run build
 FROM node:20-alpine AS backend-builder
 WORKDIR /app/backend
 COPY backend/package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 COPY backend/ .
 RUN npm run build
 
@@ -25,7 +25,7 @@ RUN addgroup -g 1001 -S nodejs && \
 # Install production dependencies
 COPY backend/package*.json ./backend/
 WORKDIR /app/backend
-RUN npm ci --production
+RUN npm ci --production --legacy-peer-deps || npm install --production --legacy-peer-deps
 
 # Copy built files
 COPY --from=backend-builder /app/backend/dist ./dist
