@@ -1,18 +1,27 @@
-# Build frontend
-FROM node:20-alpine AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-COPY frontend/ .
-RUN npm run build
+# Build frontend and backend
+FROM node:20-alpine AS builder
+WORKDIR /app
 
-# Build backend
-FROM node:20-alpine AS backend-builder
-WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
-COPY backend/ .
-RUN npm run build
+# Copy root package files for workspace setup
+COPY package.json package-lock.json ./
+
+# Copy workspace package files
+COPY frontend/package*.json ./frontend/
+COPY backend/package*.json ./backend/
+
+# Install all dependencies (workspace-aware)
+RUN npm ci --legacy-peer-deps
+
+# Copy source files
+COPY frontend/ ./frontend/
+COPY backend/ ./backend/
+
+# Build both workspaces
+RUN npm run build --workspace=frontend
+RUN npm run build --workspace=backend
+
+# Copy schema.sql into dist/db so it's included in the dist directory
+RUN cp /app/backend/src/db/schema.sql /app/backend/dist/db/schema.sql
 
 # Production image
 FROM node:20-alpine
@@ -22,15 +31,22 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Install production dependencies
-COPY backend/package*.json ./backend/
-WORKDIR /app/backend
-RUN npm ci --production --legacy-peer-deps || npm install --production --legacy-peer-deps
+# Copy root package files for workspace setup
+COPY package.json package-lock.json ./
 
-# Copy built files
-COPY --from=backend-builder /app/backend/dist ./dist
-COPY --from=backend-builder /app/backend/src/db/schema.sql ./src/db/schema.sql
-COPY --from=frontend-builder /app/frontend/dist ./public
+# Copy backend package files
+COPY backend/package*.json ./backend/
+
+# Install production dependencies for backend workspace only
+WORKDIR /app
+RUN npm ci --production --legacy-peer-deps --workspace=backend
+
+# Copy built files (schema.sql is already included in dist from builder stage)
+COPY --from=builder /app/backend/dist ./backend/dist
+COPY --from=builder /app/frontend/dist ./public
+
+# Set working directory to backend for runtime
+WORKDIR /app/backend
 
 # Create data directory for SQLite with proper permissions
 RUN mkdir -p /app/data && \

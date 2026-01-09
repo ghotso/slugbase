@@ -47,22 +47,6 @@ if (DB_TYPE === 'postgresql') {
 export async function initDatabase() {
   let schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
   
-  // Clean up any existing _internal_ placeholder slugs
-  try {
-    if (DB_TYPE === 'postgresql') {
-      const pool = db as Pool;
-      await pool.query(`UPDATE bookmarks SET slug = NULL WHERE slug LIKE '_internal_%' OR slug = ''`);
-    } else {
-      const sqlite = db as Database.Database;
-      sqlite.prepare(`UPDATE bookmarks SET slug = NULL WHERE slug LIKE '_internal_%' OR slug = ''`).run();
-    }
-  } catch (error: any) {
-    // Ignore errors (table might not exist yet)
-    if (!error.message.includes('no such table')) {
-      console.warn('Could not clean up internal slugs:', error.message);
-    }
-  }
-  
   if (DB_TYPE === 'postgresql') {
     const pool = db as Pool;
     // Convert to PostgreSQL-compatible syntax
@@ -91,6 +75,15 @@ export async function initDatabase() {
       .replace(/VARCHAR\((\d+)\)/g, 'TEXT')
       .replace(/TIMESTAMP/g, 'DATETIME');
     sqlite.exec(schema);
+  }
+  
+  // Run migrations after initial schema setup
+  try {
+    const { runMigrations } = await import('./migrations/index.js');
+    await runMigrations();
+  } catch (error) {
+    console.error('Error running migrations:', error);
+    throw error;
   }
 }
 

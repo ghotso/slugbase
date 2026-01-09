@@ -101,27 +101,27 @@ export default function Tags() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all"
+              className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg transition-all duration-200 flex flex-col"
             >
-              <div className="p-4 space-y-3">
+              <div className="p-5 space-y-3 flex-1 flex flex-col">
                 {/* Header with icon */}
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                    <TagIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 flex items-center justify-center border border-purple-100 dark:border-purple-800/50">
+                    <TagIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pt-0.5">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                       {tag.name}
                     </h3>
                   </div>
                 </div>
 
-                {/* Actions - minimal */}
-                <div className="flex gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+                {/* Actions */}
+                <div className="flex gap-2 pt-3 mt-auto border-t border-gray-100 dark:border-gray-700/50">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -137,7 +137,7 @@ export default function Tags() {
                     icon={Trash2}
                     onClick={() => handleDelete(tag.id)}
                     title={t('common.delete')}
-                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 px-2"
                   />
                 </div>
               </div>

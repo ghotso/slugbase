@@ -5,6 +5,8 @@ import { validateUrl } from '../utils/validation.js';
 
 const router = Router();
 
+// Note: No middleware here - we'll check in the route handler itself
+
 /**
  * @swagger
  * /{user_key}/{slug}:
@@ -39,9 +41,25 @@ const router = Router();
  *         description: Bookmark not found or forwarding not enabled
  */
 // Redirect route: /{user_key}/{slug}
-router.get('/:user_key/:slug', strictRateLimiter, async (req, res) => {
+// Only match if we have exactly 2 path segments (not root or single segment)
+router.get('/:user_key/:slug', strictRateLimiter, async (req, res, next) => {
   try {
+    // CRITICAL: Check path segments FIRST - if not exactly 2, skip this route entirely
+    const pathSegments = req.path.split('/').filter(Boolean);
+    if (req.path === '/' || req.path === '' || pathSegments.length !== 2) {
+      // Don't process - this route shouldn't match root or non-2-segment paths
+      // But Express has already matched the route pattern, so we need to call next()
+      // However, this will go to next middleware, not next route handler
+      // So we need a different approach - don't mount this router at root
+      return next();
+    }
+
     const { user_key, slug } = req.params;
+
+    // Additional validation: ensure we have both parameters
+    if (!user_key || !slug) {
+      return next(); // Let it fall through to next handler
+    }
 
     const bookmark = await queryOne(
       `SELECT b.* FROM bookmarks b

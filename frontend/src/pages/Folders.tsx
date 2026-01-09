@@ -92,7 +92,7 @@ export default function Folders() {
             {t('folders.title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
+            {folders.length} {folders.length === 1 ? t('common.folder') : t('common.folders')}
           </p>
         </div>
         <Button onClick={handleCreate} icon={Plus}>
@@ -110,24 +110,24 @@ export default function Folders() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {folders.map((folder) => (
             <div
               key={folder.id}
-              className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all"
+              className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col"
             >
-              <div className="p-4 space-y-3">
+              <div className="p-5 space-y-3 flex-1 flex flex-col">
                 {/* Header with icon */}
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                    <FolderIcon iconName={folder.icon} size={20} className="text-blue-600 dark:text-blue-400" />
+                  <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50">
+                    <FolderIcon iconName={folder.icon} size={24} className="text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1.5">
                       {folder.name}
                     </h3>
                     {folder.folder_type === 'shared' && (
-                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50">
                         <Share2 className="h-3 w-3" />
                         {t('folders.shared')}
                       </span>
@@ -135,13 +135,13 @@ export default function Folders() {
                   </div>
                 </div>
 
-                {/* Shared Teams - compact */}
+                {/* Shared Teams */}
                 {folder.shared_teams && folder.shared_teams.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {folder.shared_teams.slice(0, 2).map((team) => (
                       <span
                         key={team.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-md border border-indigo-200 dark:border-indigo-800/50"
                       >
                         <Share2 className="h-3 w-3" />
                         {team.name}
@@ -155,9 +155,9 @@ export default function Folders() {
                   </div>
                 )}
 
-                {/* Actions - minimal */}
+                {/* Actions */}
                 {folder.folder_type === 'own' && (
-                  <div className="flex gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex gap-2 pt-3 mt-auto border-t border-gray-100 dark:border-gray-700/50">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -173,7 +173,7 @@ export default function Folders() {
                       icon={Trash2}
                       onClick={() => handleDelete(folder.id)}
                       title={t('common.delete')}
-                      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 px-2"
                     />
                   </div>
                 )}

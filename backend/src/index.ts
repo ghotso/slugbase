@@ -10,11 +10,12 @@ import passport from 'passport';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { initDatabase, isInitialized } from './db/index.js';
+import { initDatabase, isInitialized, queryOne } from './db/index.js';
 import { setupOIDC, loadOIDCStrategies } from './auth/oidc.js';
 import { setupJWT } from './auth/jwt.js';
 import { validateEnvironmentVariables } from './utils/env-validation.js';
-import { setupSecurityHeaders, generalRateLimiter } from './middleware/security.js';
+import { setupSecurityHeaders, generalRateLimiter, strictRateLimiter } from './middleware/security.js';
+import { validateUrl } from './utils/validation.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger.js';
 import authRoutes from './routes/auth.js';
@@ -46,7 +47,7 @@ app.use(setupSecurityHeaders());
 
 // Serve static files from frontend build in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(join(__dirname, '../public')));
+  app.use(express.static(join(__dirname, '../../public')));
 }
 
 // Middleware
@@ -134,24 +135,88 @@ app.use('/api/oidc-providers', oidcProviderRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/teams', adminTeamRoutes);
 app.use('/api/admin/settings', adminSettingsRoutes);
-app.use('/', redirectRoutes); // Redirect routes at root level
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Redirect routes - handle 2-segment paths only (user_key/slug pattern)
+// Use regex to ensure route only matches paths with exactly 2 non-empty segments
+// This prevents the route from matching `/` (root path)
+app.get(/^\/([^\/]+)\/([^\/]+)$/, strictRateLimiter, async (req, res, next) => {
+  try {
+    // Extract user_key and slug from the matched groups
+    const match = req.path.match(/^\/([^\/]+)\/([^\/]+)$/);
+    if (!match) {
+      return next();
+    }
+    const user_key = match[1];
+    const slug = match[2];
+
+    // user_key and slug are already extracted from regex match above
+    if (!user_key || !slug) {
+      return next();
+    }
+
+    const bookmark = await queryOne(
+      `SELECT b.* FROM bookmarks b
+       INNER JOIN users u ON b.user_id = u.id
+       WHERE u.user_key = ? AND b.slug = ? AND b.forwarding_enabled = TRUE`,
+      [user_key, slug]
+    );
+
+    if (!bookmark) {
+      return res.status(404).send('Not Found');
+    }
+
+    const redirectUrl = (bookmark as any).url;
+    const urlValidation = validateUrl(redirectUrl);
+    if (!urlValidation.valid) {
+      console.error('Invalid redirect URL detected:', redirectUrl);
+      return res.status(400).send('Invalid redirect URL');
+    }
+
+    res.redirect(302, redirectUrl);
+  } catch (error: any) {
+    console.error('Redirect error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Serve frontend root route in production (AFTER redirect route, since redirect requires 2 segments)
+if (process.env.NODE_ENV === 'production') {
+  app.get('/', (req, res) => {
+    res.sendFile(join(__dirname, '../../public/index.html'));
+  });
+}
+
+// Serve frontend catch-all in production (for SPA routing - before error handlers)
+// This catches all non-API, non-redirect routes for SPA client-side routing
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res, next) => {
+    // Skip API routes and redirect patterns (2 segments)
+    if (req.path.startsWith('/api/') || req.path.startsWith('/api-docs')) {
+      return next();
+    }
+    const pathSegments = req.path.split('/').filter(Boolean);
+    if (pathSegments.length === 2) {
+      // This might be a redirect route, let it fall through
+      return next();
+    }
+    res.sendFile(join(__dirname, '../../public/index.html'), (err) => {
+      if (err) {
+        console.error('Error sending index.html:', err);
+        return next();
+      }
+    });
+  });
+}
+
 // Error handling (must be last)
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 app.use(notFoundHandler);
 app.use(errorHandler);
-
-// Serve frontend in production
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(join(__dirname, '../public/index.html'));
-  });
-}
 
 // Initialize database on startup
 async function start() {
