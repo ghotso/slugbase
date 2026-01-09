@@ -62,17 +62,21 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
     return { valid: false, error: `URL must be no more than ${MAX_LENGTHS.url} characters` };
   }
 
+  // First, check for dangerous protocols before parsing (prevents bypass)
+  const lowerUrl = url.toLowerCase().trim();
+  if (lowerUrl.startsWith('javascript:') || lowerUrl.startsWith('data:') || lowerUrl.startsWith('vbscript:')) {
+    return { valid: false, error: 'Invalid URL protocol' };
+  }
+
   try {
     const parsed = new URL(url);
     
+    // Normalize protocol to lowercase for comparison
+    const protocol = parsed.protocol.toLowerCase();
+    
     // Only allow http and https protocols
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    if (protocol !== 'http:' && protocol !== 'https:') {
       return { valid: false, error: 'URL must use http or https protocol' };
-    }
-
-    // Prevent javascript: and data: URLs
-    if (url.toLowerCase().startsWith('javascript:') || url.toLowerCase().startsWith('data:')) {
-      return { valid: false, error: 'Invalid URL protocol' };
     }
 
     return { valid: true };

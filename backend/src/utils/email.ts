@@ -2,6 +2,34 @@ import nodemailer from 'nodemailer';
 import { queryOne } from '../db/index.js';
 import { decrypt } from './encryption.js';
 
+/**
+ * Escape HTML to prevent XSS attacks
+ */
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Validate and escape URL for safe use in HTML href attributes
+ * Note: href attributes need the URL as-is (not HTML-escaped) but display text should be escaped
+ */
+function safeUrlForHref(url: string): string {
+  // URL should already be validated before being passed here
+  // For href attributes, we can use the URL directly since it's validated
+  // But we'll double-check it doesn't contain javascript: or data: protocols
+  const lowerUrl = url.toLowerCase().trim();
+  if (lowerUrl.startsWith('javascript:') || lowerUrl.startsWith('data:') || lowerUrl.startsWith('vbscript:')) {
+    // This should never happen if validation is working, but be defensive
+    return '#';
+  }
+  return url;
+}
+
 interface SMTPConfig {
   host: string;
   port: number;
@@ -66,12 +94,13 @@ async function getSMTPConfig(): Promise<{ config: SMTPConfig | null; error?: str
     // Ensure decrypted password is not empty
     const trimmedPassword = decryptedPassword ? decryptedPassword.trim() : '';
     if (!trimmedPassword) {
-      console.error('SMTP password is empty. Original value length:', passwordValue.length);
+      // Don't log sensitive information - only log that password validation failed
+      console.error('SMTP password validation failed: password is empty');
       return { config: null, error: 'SMTP password is empty. Please set a password in the SMTP settings.' };
     }
 
-    // Log for debugging (but don't log the actual password)
-    console.log('SMTP config loaded successfully. Password length:', trimmedPassword.length);
+    // Log for debugging (but don't log sensitive information)
+    console.log('SMTP config loaded successfully');
 
     return {
       config: {
@@ -111,12 +140,8 @@ export async function sendEmail(to: string, subject: string, html: string, text?
     const authPassword = config.auth.password.trim();
 
     if (!authUser || !authPassword) {
-      console.error('SMTP auth validation failed:', {
-        userLength: authUser.length,
-        passwordLength: authPassword.length,
-        userEmpty: !authUser,
-        passwordEmpty: !authPassword,
-      });
+      // Don't log sensitive information like lengths or values
+      console.error('SMTP auth validation failed: credentials are empty');
       return { success: false, error: 'SMTP auth credentials are empty' };
     }
 
@@ -131,22 +156,31 @@ export async function sendEmail(to: string, subject: string, html: string, text?
       },
     };
 
+    // Don't log sensitive information like username or password details
     console.log('Creating SMTP transporter with:', {
       host: config.host,
       port: config.port,
       secure: config.secure,
-      user: authUser,
-      passwordLength: authPassword.length,
     });
 
     const transporter = nodemailer.createTransport(transportConfig);
+
+    // Safe HTML stripping: use a non-catastrophic regex with bounded quantifier
+    const stripHtml = (htmlContent: string): string => {
+      // Limit input size to prevent ReDoS
+      if (htmlContent.length > 100000) {
+        htmlContent = htmlContent.substring(0, 100000);
+      }
+      // Use bounded quantifier {0,1000} to prevent ReDoS attacks
+      return htmlContent.replace(/<[^>]{0,1000}>/g, '');
+    };
 
     const info = await transporter.sendMail({
       from: `"${config.fromName}" <${config.from}>`,
       to,
       subject,
-      text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
-      html,
+      text: text || stripHtml(html), // Strip HTML for text version
+      html, // HTML is already escaped in template functions
     });
 
     console.log('Email sent:', info.messageId);
@@ -161,6 +195,11 @@ export async function sendEmail(to: string, subject: string, html: string, text?
  * Send password reset email
  */
 export async function sendPasswordResetEmail(email: string, resetToken: string, resetUrl: string): Promise<boolean> {
+  // Validate and sanitize URL for safe use in email
+  // URL is already validated before being passed here, but we ensure it's safe for href
+  const safeHrefUrl = safeUrlForHref(resetUrl);
+  const escapedDisplayUrl = escapeHtml(resetUrl); // Escape for display text
+  
   const subject = 'Password Reset Request - SlugBase';
   const html = `
 <!DOCTYPE html>
@@ -202,13 +241,13 @@ export async function sendPasswordResetEmail(email: string, resetToken: string, 
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 0;">
-                    <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background-color: #667eea; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; text-align: center; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">Reset Password</a>
+                    <a href="${safeHrefUrl}" style="display: inline-block; padding: 14px 32px; background-color: #667eea; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; text-align: center; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);">Reset Password</a>
                   </td>
                 </tr>
               </table>
               
               <p style="margin: 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">Or copy and paste this link into your browser:</p>
-              <p style="margin: 0 0 30px; padding: 12px; background-color: #f9fafb; border-radius: 4px; word-break: break-all; color: #4a4a4a; font-size: 13px; font-family: 'Courier New', monospace; line-height: 1.5;">${resetUrl}</p>
+              <p style="margin: 0 0 30px; padding: 12px; background-color: #f9fafb; border-radius: 4px; word-break: break-all; color: #4a4a4a; font-size: 13px; font-family: 'Courier New', monospace; line-height: 1.5;">${escapedDisplayUrl}</p>
               
               <!-- Warning -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
@@ -250,6 +289,9 @@ export async function testSMTPConfig(testEmail: string): Promise<{ success: bool
       return { success: false, error: error || 'SMTP not configured or not enabled' };
     }
 
+    // Escape user-provided email to prevent XSS
+    const escapedTestEmail = escapeHtml(testEmail);
+    
     const subject = 'SMTP Test Email - SlugBase';
     const sentDate = new Date().toLocaleString('en-US', { 
       weekday: 'long', 
@@ -320,7 +362,7 @@ export async function testSMTPConfig(testEmail: string): Promise<{ success: bool
                       </tr>
                       <tr>
                         <td style="padding: 0; color: #1a1a1a; font-size: 14px; line-height: 1.6;">
-                          <strong style="color: #4a4a4a;">Recipient:</strong> ${testEmail}
+                          <strong style="color: #4a4a4a;">Recipient:</strong> ${escapedTestEmail}
                         </td>
                       </tr>
                     </table>
