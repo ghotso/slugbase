@@ -346,11 +346,214 @@ router.get('/:provider/callback', (req, res, next) => {
   console.log(`[OIDC] Session data:`, req.session);
   console.log(`[OIDC] Cookies:`, req.cookies);
   
-  passport.authenticate(provider, (err: any, user: any, info: any) => {
+  // Intercept the strategy to log token response before it's processed
+  // This helps debug why passport-openidconnect isn't finding the ID token
+  const originalStrategy = (passport as any)._strategies[provider];
+  if (originalStrategy && originalStrategy._oauth2) {
+    const oauth2 = originalStrategy._oauth2;
+    const originalGetOAuthAccessToken = oauth2.getOAuthAccessToken;
+    
+    if (originalGetOAuthAccessToken) {
+      oauth2.getOAuthAccessToken = function(this: any, code: string, params: any, callback: any) {
+        console.log(`[OIDC] Intercepting token request for ${provider}`);
+        console.log(`[OIDC] Token URL: ${oauth2._accessTokenUrl}`);
+        console.log(`[OIDC] Code: ${code.substring(0, 20)}...`);
+        console.log(`[OIDC] Params:`, params);
+        
+        const wrappedCallback = (err: any, accessToken: string, refreshToken: string, results: any) => {
+          if (err) {
+            console.error(`[OIDC] Token request error:`, err);
+          }
+          
+          if (results) {
+            // Check if results look like HTML (error page)
+            const resultStr = typeof results === 'string' ? results : JSON.stringify(results);
+            if (resultStr.includes('<!doctype') || resultStr.includes('<html')) {
+              console.error(`[OIDC] Token endpoint returned HTML instead of JSON!`);
+              console.error(`[OIDC] This usually means the token endpoint URL is wrong or there's an error`);
+              console.error(`[OIDC] First 500 chars of response:`, resultStr.substring(0, 500));
+            } else {
+              console.log(`[OIDC] Token response received:`, {
+                hasAccessToken: !!accessToken,
+                hasRefreshToken: !!refreshToken,
+                resultKeys: Object.keys(results),
+                idToken: results.id_token ? `present (${results.id_token.length} chars)` : 'missing',
+                idTokenFirstChars: results.id_token ? results.id_token.substring(0, 50) : 'N/A',
+                accessTokenFirstChars: accessToken ? accessToken.substring(0, 30) : 'N/A',
+              });
+            }
+          }
+          return callback(err, accessToken, refreshToken, results);
+        };
+        return originalGetOAuthAccessToken.call(this, code, params, wrappedCallback);
+      };
+    }
+  }
+  
+  passport.authenticate(provider, async (err: any, user: any, info: any) => {
     console.log(`[OIDC] Authentication result for ${provider}:`);
     console.log(`[OIDC] Error:`, err ? err.message : 'none');
     console.log(`[OIDC] User:`, user ? { id: user.id, email: user.email } : 'none');
     console.log(`[OIDC] Info:`, info);
+    
+    // Handle "ID token not present" error - some providers don't return ID tokens
+    // and passport-openidconnect fails before it can use userInfo endpoint
+    if (err && err.message === 'ID token not present in token response') {
+      console.log(`[OIDC] ID token missing, attempting to fetch from userInfo endpoint manually`);
+      console.log(`[OIDC] Full session data for debugging:`, JSON.stringify(req.session, null, 2));
+      
+      try {
+        // Get the access token from the session (stored by passport during OAuth flow)
+        // passport-openidconnect stores it under a key like 'openidconnect:issuer'
+        const issuer = req.query.iss as string || 'https://auth.guggiraid.com';
+        const sessionKey = `openidconnect:${issuer}`;
+        const oauthState = (req.session as any)?.[sessionKey];
+        
+        console.log(`[OIDC] Looking for session key: ${sessionKey}`);
+        console.log(`[OIDC] OAuth state found:`, oauthState ? 'yes' : 'no');
+        
+        if (!oauthState) {
+          // Try to find any openidconnect key in session
+          const allKeys = Object.keys(req.session as any || {});
+          const oidcKeys = allKeys.filter((k: string) => k.startsWith('openidconnect:'));
+          console.log(`[OIDC] All OIDC keys in session:`, oidcKeys);
+          
+          if (oidcKeys.length > 0) {
+            const firstKey = oidcKeys[0];
+            const firstState = (req.session as any)?.[firstKey];
+            console.log(`[OIDC] Using first OIDC key: ${firstKey}`, firstState);
+            
+            if (firstState?.token_response?.access_token) {
+              const accessToken = firstState.token_response.access_token;
+              const actualIssuer = firstKey.replace('openidconnect:', '');
+              
+              // Fetch user info manually
+              const userInfoUrl = `${actualIssuer}/userinfo`;
+              console.log(`[OIDC] Fetching user info from: ${userInfoUrl}`);
+              
+              const userInfoResponse = await fetch(userInfoUrl, {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Accept': 'application/json',
+                },
+              });
+              
+              if (!userInfoResponse.ok) {
+                const errorText = await userInfoResponse.text();
+                throw new Error(`UserInfo request failed: ${userInfoResponse.status} ${userInfoResponse.statusText} - ${errorText}`);
+              }
+              
+              const userInfo: any = await userInfoResponse.json();
+              console.log(`[OIDC] UserInfo response:`, userInfo);
+              
+              // Get the verify function from the strategy
+              const strategy = (passport as any)._strategies[provider];
+              if (!strategy || !strategy._verify) {
+                throw new Error('Verify function not found for provider');
+              }
+              
+              // Create a mock profile from userInfo
+              const profile = {
+                id: userInfo.sub || userInfo.id,
+                displayName: userInfo.name || userInfo.preferred_username,
+                name: userInfo.name,
+                emails: userInfo.email ? [{ value: userInfo.email }] : [],
+                email: userInfo.email,
+              };
+              
+              // Call verify function with userInfo data
+              strategy._verify(
+                actualIssuer,
+                userInfo.sub || userInfo.id,
+                profile,
+                accessToken,
+                firstState.token_response.refresh_token,
+                (verifyErr: any, verifiedUser: any) => {
+                  if (verifyErr || !verifiedUser) {
+                    console.error(`[OIDC] Verify function error:`, verifyErr);
+                    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+                  }
+                  
+                  // Continue with normal flow
+                  user = verifiedUser;
+                  handleSuccess();
+                }
+              );
+              
+              return; // Exit early, handleSuccess will be called from verify callback
+            }
+          }
+          
+          throw new Error('No OAuth state found in session');
+        }
+        
+        const accessToken = oauthState.token_response?.access_token;
+        if (!accessToken) {
+          throw new Error('No access token found in token response');
+        }
+        
+        // Fetch user info manually
+        const userInfoUrl = `${issuer}/userinfo`;
+        console.log(`[OIDC] Fetching user info from: ${userInfoUrl}`);
+        
+        const userInfoResponse = await fetch(userInfoUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (!userInfoResponse.ok) {
+          const errorText = await userInfoResponse.text();
+          throw new Error(`UserInfo request failed: ${userInfoResponse.status} ${userInfoResponse.statusText} - ${errorText}`);
+        }
+        
+        const userInfo: any = await userInfoResponse.json();
+        console.log(`[OIDC] UserInfo response:`, userInfo);
+        
+        // Get the verify function from the strategy
+        const strategy = (passport as any)._strategies[provider];
+        if (!strategy || !strategy._verify) {
+          throw new Error('Verify function not found for provider');
+        }
+        
+        // Create a mock profile from userInfo
+        const profile = {
+          id: userInfo.sub || userInfo.id,
+          displayName: userInfo.name || userInfo.preferred_username,
+          name: userInfo.name,
+          emails: userInfo.email ? [{ value: userInfo.email }] : [],
+          email: userInfo.email,
+        };
+        
+        // Call verify function with userInfo data
+        strategy._verify(
+          issuer,
+          userInfo.sub || userInfo.id,
+          profile,
+          accessToken,
+          oauthState.token_response?.refresh_token,
+          (verifyErr: any, verifiedUser: any) => {
+            if (verifyErr || !verifiedUser) {
+              console.error(`[OIDC] Verify function error:`, verifyErr);
+              return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+            }
+            
+            // Continue with normal flow
+            user = verifiedUser;
+            handleSuccess();
+          }
+        );
+        
+        return; // Exit early, handleSuccess will be called from verify callback
+      } catch (manualFetchError: any) {
+        console.error(`[OIDC] Manual userInfo fetch failed:`, {
+          message: manualFetchError.message,
+          stack: manualFetchError.stack,
+        });
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+      }
+    }
     
     if (err || !user) {
       // Check for specific error types
@@ -369,33 +572,41 @@ router.get('/:provider/callback', (req, res, next) => {
       }
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${errorParam}`);
     }
+    
+    function handleSuccess() {
 
-    // Generate JWT token for OIDC user
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      user_key: user.user_key,
-      is_admin: user.is_admin,
-    });
+      // Generate JWT token for OIDC user
+      const token = generateToken({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        user_key: user.user_key,
+        is_admin: user.is_admin,
+      });
 
-    // Set httpOnly cookie with JWT token
-    const isProduction = process.env.NODE_ENV === 'production';
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict', // Always use strict for CSRF protection
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+      // Set httpOnly cookie with JWT token
+      const isProduction = process.env.NODE_ENV === 'production';
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'strict', // Always use strict for CSRF protection
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
 
-    // Destroy session since we're using JWT for authentication
-    // Session was only needed for the OAuth flow
-    req.session?.destroy((sessionErr) => {
-      if (sessionErr) {
-        console.error('Error destroying session:', sessionErr);
-      }
-      res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000');
-    });
+      // Destroy session since we're using JWT for authentication
+      // Session was only needed for the OAuth flow
+      req.session?.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error('Error destroying session:', sessionErr);
+        }
+        res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000');
+      });
+    }
+    
+    // If we got here normally (not from manual fetch), handle success
+    if (user) {
+      handleSuccess();
+    }
   })(req, res, next);
 });
 

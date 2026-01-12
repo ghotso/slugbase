@@ -90,6 +90,14 @@
     "themeDark": "Sombre",
     "save": "Enregistrer les paramètres"
   },
+  "admin": {
+    "customEndpoints": "Points de terminaison OIDC personnalisés",
+    "customEndpointsDescription": "Remplacez les chemins de point de terminaison OIDC par défaut. Laissez vide pour utiliser les chemins standard basés sur l'URL de l'émetteur.",
+    "authorizationUrl": "URL d'autorisation",
+    "tokenUrl": "URL du jeton",
+    "userinfoUrl": "URL UserInfo",
+    "optional": "Optionnel"
+  },
   "common": {
     "loading": "Chargement...",
     "error": "Une erreur s'est produite",
@@ -99,6 +107,8 @@
     "edit": "Modifier",
     "create": "Créer",
     "save": "Enregistrer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "yes": "Oui",
+    "no": "Non"
   }
 }

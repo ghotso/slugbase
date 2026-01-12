@@ -25,7 +25,7 @@ export function setupOIDC() {
 
 export async function loadOIDCStrategies() {
   try {
-    const providers = await query('SELECT * FROM oidc_providers', []);
+    const providers = await query('SELECT id, provider_key, client_id, client_secret, issuer_url, authorization_url, token_url, userinfo_url, scopes, auto_create_users, default_role FROM oidc_providers', []);
     if (!providers || providers.length === 0) return;
 
     const providersList = Array.isArray(providers) ? providers : [providers];
@@ -181,21 +181,45 @@ export async function loadOIDCStrategies() {
       console.log(`[OIDC] Scopes: ${provider.scopes}`);
       console.log(`[OIDC] Auto-create users: ${provider.auto_create_users}`);
       
+      // Some OIDC providers don't return ID tokens in the token response
+      // passport-openidconnect will use the userInfo endpoint as fallback
+      // but we need to ensure the configuration allows this
+      // Use custom endpoints if provided, otherwise use standard OIDC defaults
+      const authorizationURL = provider.authorization_url || `${provider.issuer_url}/authorize`;
+      const tokenURL = provider.token_url || `${provider.issuer_url}/token`;
+      const userInfoURL = provider.userinfo_url || `${provider.issuer_url}/userinfo`;
+      
+      const strategyConfig: any = {
+        issuer: provider.issuer_url,
+        authorizationURL: authorizationURL,
+        tokenURL: tokenURL,
+        userInfoURL: userInfoURL,
+        clientID: provider.client_id,
+        clientSecret: decryptedSecret,
+        callbackURL: callbackURL,
+        scope: provider.scopes.split(' '),
+        skipUserProfile: false, // Always fetch from userInfo if needed
+      };
+      
+      console.log(`[OIDC] Using endpoints:`, {
+        authorization: authorizationURL,
+        token: tokenURL,
+        userInfo: userInfoURL,
+        customEndpoints: !!(provider.authorization_url || provider.token_url || provider.userinfo_url),
+      });
+      
+      console.log(`[OIDC] Strategy config for ${provider.provider_key}:`, {
+        issuer: strategyConfig.issuer,
+        authorizationURL: strategyConfig.authorizationURL,
+        tokenURL: strategyConfig.tokenURL,
+        userInfoURL: strategyConfig.userInfoURL,
+        callbackURL: strategyConfig.callbackURL,
+        scopes: strategyConfig.scope,
+      });
+      
       passport.use(
         provider.provider_key,
-        new OpenIDConnectStrategy(
-          {
-            issuer: provider.issuer_url,
-            authorizationURL: `${provider.issuer_url}/authorize`,
-            tokenURL: `${provider.issuer_url}/token`,
-            userInfoURL: `${provider.issuer_url}/userinfo`,
-            clientID: provider.client_id,
-            clientSecret: decryptedSecret,
-            callbackURL: callbackURL,
-            scope: provider.scopes.split(' '),
-          },
-          verifyFunction as any
-        )
+        new OpenIDConnectStrategy(strategyConfig, verifyFunction as any)
       );
     }
   } catch (error) {

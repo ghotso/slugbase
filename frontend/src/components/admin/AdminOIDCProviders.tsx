@@ -11,6 +11,9 @@ interface OIDCProvider {
   id: string;
   provider_key: string;
   issuer_url: string;
+  authorization_url?: string;
+  token_url?: string;
+  userinfo_url?: string;
   scopes: string;
   auto_create_users: boolean;
   default_role: string;
@@ -119,6 +122,15 @@ export default function AdminOIDCProviders() {
                   <Globe className="h-4 w-4" />
                   <span className="truncate">{provider.issuer_url}</span>
                 </div>
+                {(provider.authorization_url || provider.token_url || provider.userinfo_url) && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    {provider.token_url && (
+                      <div className="truncate">
+                        <span className="font-medium">Token:</span> {provider.token_url}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {provider.callback_url && (
                   <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">

@@ -113,12 +113,15 @@ app.use(session({
 // General rate limiting (applied to all routes)
 app.use(generalRateLimiter);
 
+// Setup Passport strategies BEFORE initializing passport middleware
+// This ensures serializeUser/deserializeUser are registered before passport.session() is used
+setupOIDC(); // Setup OIDC strategies (registers serializeUser/deserializeUser for sessions)
+setupJWT(); // Setup JWT strategy
+
 // Passport initialization
 // Sessions are needed for OIDC OAuth flow, but we use JWT for final authentication
 app.use(passport.initialize());
-app.use(passport.session()); // Required for OIDC to work
-setupJWT(); // Setup JWT strategy
-setupOIDC(); // Setup OIDC strategies
+app.use(passport.session()); // Required for OIDC to work (uses serialization from setupOIDC)
 
 // Swagger API Documentation (standalone page, not in admin UI)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

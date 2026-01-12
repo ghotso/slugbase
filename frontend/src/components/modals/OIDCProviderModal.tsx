@@ -9,6 +9,9 @@ interface OIDCProvider {
   id: string;
   provider_key: string;
   issuer_url: string;
+  authorization_url?: string;
+  token_url?: string;
+  userinfo_url?: string;
   scopes: string;
   auto_create_users: boolean;
   default_role: string;
@@ -33,6 +36,9 @@ export default function OIDCProviderModal({
     client_id: '',
     client_secret: '',
     issuer_url: '',
+    authorization_url: '',
+    token_url: '',
+    userinfo_url: '',
     scopes: 'openid profile email',
     auto_create_users: true,
     default_role: 'user',
@@ -47,6 +53,9 @@ export default function OIDCProviderModal({
         client_id: '',
         client_secret: '',
         issuer_url: provider.issuer_url,
+        authorization_url: provider.authorization_url || '',
+        token_url: provider.token_url || '',
+        userinfo_url: provider.userinfo_url || '',
         scopes: provider.scopes,
         auto_create_users: provider.auto_create_users,
         default_role: provider.default_role,
@@ -57,6 +66,9 @@ export default function OIDCProviderModal({
         client_id: '',
         client_secret: '',
         issuer_url: '',
+        authorization_url: '',
+        token_url: '',
+        userinfo_url: '',
         scopes: 'openid profile email',
         auto_create_users: true,
         default_role: 'user',
@@ -75,6 +87,16 @@ export default function OIDCProviderModal({
       const payload: any = { ...formData };
       if (!payload.client_secret) {
         delete payload.client_secret;
+      }
+      // Remove empty endpoint URLs (use defaults)
+      if (!payload.authorization_url) {
+        delete payload.authorization_url;
+      }
+      if (!payload.token_url) {
+        delete payload.token_url;
+      }
+      if (!payload.userinfo_url) {
+        delete payload.userinfo_url;
       }
 
       if (provider) {
@@ -172,6 +194,57 @@ export default function OIDCProviderModal({
             value={formData.scopes}
             onChange={(e) => setFormData({ ...formData, scopes: e.target.value })}
           />
+        </div>
+
+        {/* Custom OIDC Endpoints (Optional) */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            {t('admin.customEndpoints')} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">({t('admin.optional')})</span>
+          </h3>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+            {t('admin.customEndpointsDescription')}
+          </p>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                {t('admin.authorizationUrl')}
+              </label>
+              <input
+                type="url"
+                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder={`${formData.issuer_url || 'https://issuer.com'}/authorize`}
+                value={formData.authorization_url}
+                onChange={(e) => setFormData({ ...formData, authorization_url: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                {t('admin.tokenUrl')}
+              </label>
+              <input
+                type="url"
+                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder={`${formData.issuer_url || 'https://issuer.com'}/token`}
+                value={formData.token_url}
+                onChange={(e) => setFormData({ ...formData, token_url: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                {t('admin.userinfoUrl')}
+              </label>
+              <input
+                type="url"
+                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder={`${formData.issuer_url || 'https://issuer.com'}/userinfo`}
+                value={formData.userinfo_url}
+                onChange={(e) => setFormData({ ...formData, userinfo_url: e.target.value })}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
