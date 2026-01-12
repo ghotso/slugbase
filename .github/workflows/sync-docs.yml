@@ -1,0 +1,66 @@
+name: Sync Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ghotso/slugbase-docs
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: slugbase-docs
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          cd slugbase-docs
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync documentation files
+        run: |
+          # Copy all markdown files from docs/ to slugbase-docs/docs/
+          mkdir -p slugbase-docs/docs
+          cp -v docs/*.md slugbase-docs/docs/ 2>/dev/null || true
+          
+          # List what was copied for logging
+          echo "Files synced:"
+          ls -la slugbase-docs/docs/*.md 2>/dev/null || echo "No markdown files found"
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          cd slugbase-docs
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          cd slugbase-docs
+          git add docs/*.md
+          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          git commit -m "docs: sync documentation from slugbase repository
+
+          Triggered by: $COMMIT_URL
+          [skip ci]" || exit 0
+          git push
