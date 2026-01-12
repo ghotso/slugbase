@@ -172,6 +172,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Version endpoint
+app.get('/api/version', (req, res) => {
+  res.json({ 
+    version: process.env.COMMIT_SHA || 'dev',
+    commit: process.env.COMMIT_SHA || null
+  });
+});
+
 // Redirect routes - handle 2-segment paths only (user_key/slug pattern)
 // Use regex to ensure route only matches paths with exactly 2 non-empty segments
 // This prevents the route from matching `/` (root path)
