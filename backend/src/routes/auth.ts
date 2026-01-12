@@ -301,9 +301,6 @@ router.post('/logout', (req, res) => {
 // Note: OIDC requires sessions for the OAuth flow, so we don't use session: false here
 router.get('/:provider', async (req, res, next) => {
   const { provider } = req.params;
-  console.log(`[OIDC] Initiating login for provider: ${provider}`);
-  console.log(`[OIDC] Request URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`);
-  console.log(`[OIDC] BASE_URL env: ${process.env.BASE_URL}`);
   passport.authenticate(provider)(req, res, next);
 });
 
@@ -340,68 +337,12 @@ router.get('/:provider', async (req, res, next) => {
 // Note: OIDC requires sessions for the OAuth flow, but we convert to JWT after authentication
 router.get('/:provider/callback', (req, res, next) => {
   const { provider } = req.params;
-  console.log(`[OIDC] Callback received for provider: ${provider}`);
-  console.log(`[OIDC] Query params:`, req.query);
-  console.log(`[OIDC] Session ID:`, req.session?.id);
-  console.log(`[OIDC] Session data:`, req.session);
-  console.log(`[OIDC] Cookies:`, req.cookies);
-  
-  // Intercept the strategy to log token response before it's processed
-  // This helps debug why passport-openidconnect isn't finding the ID token
-  const originalStrategy = (passport as any)._strategies[provider];
-  if (originalStrategy && originalStrategy._oauth2) {
-    const oauth2 = originalStrategy._oauth2;
-    const originalGetOAuthAccessToken = oauth2.getOAuthAccessToken;
-    
-    if (originalGetOAuthAccessToken) {
-      oauth2.getOAuthAccessToken = function(this: any, code: string, params: any, callback: any) {
-        console.log(`[OIDC] Intercepting token request for ${provider}`);
-        console.log(`[OIDC] Token URL: ${oauth2._accessTokenUrl}`);
-        console.log(`[OIDC] Code: ${code.substring(0, 20)}...`);
-        console.log(`[OIDC] Params:`, params);
-        
-        const wrappedCallback = (err: any, accessToken: string, refreshToken: string, results: any) => {
-          if (err) {
-            console.error(`[OIDC] Token request error:`, err);
-          }
-          
-          if (results) {
-            // Check if results look like HTML (error page)
-            const resultStr = typeof results === 'string' ? results : JSON.stringify(results);
-            if (resultStr.includes('<!doctype') || resultStr.includes('<html')) {
-              console.error(`[OIDC] Token endpoint returned HTML instead of JSON!`);
-              console.error(`[OIDC] This usually means the token endpoint URL is wrong or there's an error`);
-              console.error(`[OIDC] First 500 chars of response:`, resultStr.substring(0, 500));
-            } else {
-              console.log(`[OIDC] Token response received:`, {
-                hasAccessToken: !!accessToken,
-                hasRefreshToken: !!refreshToken,
-                resultKeys: Object.keys(results),
-                idToken: results.id_token ? `present (${results.id_token.length} chars)` : 'missing',
-                idTokenFirstChars: results.id_token ? results.id_token.substring(0, 50) : 'N/A',
-                accessTokenFirstChars: accessToken ? accessToken.substring(0, 30) : 'N/A',
-              });
-            }
-          }
-          return callback(err, accessToken, refreshToken, results);
-        };
-        return originalGetOAuthAccessToken.call(this, code, params, wrappedCallback);
-      };
-    }
-  }
   
   passport.authenticate(provider, async (err: any, user: any, info: any) => {
-    console.log(`[OIDC] Authentication result for ${provider}:`);
-    console.log(`[OIDC] Error:`, err ? err.message : 'none');
-    console.log(`[OIDC] User:`, user ? { id: user.id, email: user.email } : 'none');
-    console.log(`[OIDC] Info:`, info);
     
     // Handle "ID token not present" error - some providers don't return ID tokens
     // and passport-openidconnect fails before it can use userInfo endpoint
     if (err && err.message === 'ID token not present in token response') {
-      console.log(`[OIDC] ID token missing, attempting to fetch from userInfo endpoint manually`);
-      console.log(`[OIDC] Full session data for debugging:`, JSON.stringify(req.session, null, 2));
-      
       try {
         // Get the access token from the session (stored by passport during OAuth flow)
         // passport-openidconnect stores it under a key like 'openidconnect:issuer'
@@ -409,19 +350,14 @@ router.get('/:provider/callback', (req, res, next) => {
         const sessionKey = `openidconnect:${issuer}`;
         const oauthState = (req.session as any)?.[sessionKey];
         
-        console.log(`[OIDC] Looking for session key: ${sessionKey}`);
-        console.log(`[OIDC] OAuth state found:`, oauthState ? 'yes' : 'no');
-        
         if (!oauthState) {
           // Try to find any openidconnect key in session
           const allKeys = Object.keys(req.session as any || {});
           const oidcKeys = allKeys.filter((k: string) => k.startsWith('openidconnect:'));
-          console.log(`[OIDC] All OIDC keys in session:`, oidcKeys);
           
           if (oidcKeys.length > 0) {
             const firstKey = oidcKeys[0];
             const firstState = (req.session as any)?.[firstKey];
-            console.log(`[OIDC] Using first OIDC key: ${firstKey}`, firstState);
             
             if (firstState?.token_response?.access_token) {
               const accessToken = firstState.token_response.access_token;
@@ -429,7 +365,6 @@ router.get('/:provider/callback', (req, res, next) => {
               
               // Fetch user info manually
               const userInfoUrl = `${actualIssuer}/userinfo`;
-              console.log(`[OIDC] Fetching user info from: ${userInfoUrl}`);
               
               const userInfoResponse = await fetch(userInfoUrl, {
                 headers: {
@@ -444,7 +379,6 @@ router.get('/:provider/callback', (req, res, next) => {
               }
               
               const userInfo: any = await userInfoResponse.json();
-              console.log(`[OIDC] UserInfo response:`, userInfo);
               
               // Get the verify function from the strategy
               const strategy = (passport as any)._strategies[provider];
@@ -494,7 +428,6 @@ router.get('/:provider/callback', (req, res, next) => {
         
         // Fetch user info manually
         const userInfoUrl = `${issuer}/userinfo`;
-        console.log(`[OIDC] Fetching user info from: ${userInfoUrl}`);
         
         const userInfoResponse = await fetch(userInfoUrl, {
           headers: {
@@ -509,7 +442,6 @@ router.get('/:provider/callback', (req, res, next) => {
         }
         
         const userInfo: any = await userInfoResponse.json();
-        console.log(`[OIDC] UserInfo response:`, userInfo);
         
         // Get the verify function from the strategy
         const strategy = (passport as any)._strategies[provider];
@@ -527,12 +459,15 @@ router.get('/:provider/callback', (req, res, next) => {
         };
         
         // Call verify function with userInfo data
+        // Updated signature: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
         strategy._verify(
           issuer,
-          userInfo.sub || userInfo.id,
           profile,
+          {}, // context
+          null, // idToken (not available in this flow)
           accessToken,
           oauthState.token_response?.refresh_token,
+          {}, // params
           (verifyErr: any, verifiedUser: any) => {
             if (verifyErr || !verifiedUser) {
               console.error(`[OIDC] Verify function error:`, verifyErr);

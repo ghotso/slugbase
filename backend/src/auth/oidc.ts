@@ -34,24 +34,22 @@ export async function loadOIDCStrategies() {
       // Decrypt client_secret when loading
       const decryptedSecret = decrypt(provider.client_secret);
       
-      const verifyFunction = async (issuer: string, sub: string, profile: Profile, accessToken: string, refreshToken: string, done: (error: any, user?: any) => void) => {
+      // passport-openidconnect verify function signature: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
+      // We'll use: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
+      const verifyFunction = async (iss: string, profile: Profile, context: any, idToken: string, accessToken: string, refreshToken: string, params: any, cb: (error: any, user?: any) => void) => {
+            // Extract sub from profile (profile.id is the sub claim) - do this before try block so it's available in catch
+            const sub = profile.id || (profile as any).sub;
+            if (!sub) {
+              console.error(`[OIDC] No sub found in profile for provider: ${provider.provider_key}`);
+              return cb(new Error('Sub claim is required for OIDC authentication'), null);
+            }
+            
             try {
-              console.log(`[OIDC] Verify function called for provider: ${provider.provider_key}`);
-              console.log(`[OIDC] Profile:`, {
-                id: profile.id,
-                displayName: profile.displayName,
-                emails: profile.emails,
-                name: profile.name,
-              });
-              console.log(`[OIDC] Sub:`, sub);
-              
               const email = profile.emails?.[0]?.value || (profile as any).email;
               if (!email) {
                 console.error(`[OIDC] No email found in profile for provider: ${provider.provider_key}`);
-                return done(new Error('Email is required for OIDC authentication'), null);
+                return cb(new Error('Email is required for OIDC authentication'), null);
               }
-              
-              console.log(`[OIDC] Processing authentication for email: ${email}`);
 
               // Use email as primary identifier - check if user exists by email
               let user = await queryOne(
@@ -69,7 +67,7 @@ export async function loadOIDCStrategies() {
                   user = await queryOne('SELECT * FROM users WHERE id = ?', [user.id]);
                 }
                 // If user exists with different OIDC provider, that's fine - email is the identifier
-                return done(null, user);
+                return cb(null, user);
               }
 
               // User doesn't exist - check if auto-creation is enabled
@@ -84,16 +82,10 @@ export async function loadOIDCStrategies() {
                                   autoCreateValue !== '0' &&
                                   autoCreateValue !== null &&
                                   autoCreateValue !== undefined);
-              console.log(`[OIDC] Auto-create check for ${provider.provider_key}:`, {
-                autoCreateValue,
-                autoCreate,
-              });
               if (!autoCreate) {
                 console.error('OIDC auto-creation disabled. Provider:', provider.provider_key, 'auto_create_users:', autoCreateValue);
-                return done(new Error('AUTO_CREATE_DISABLED'), null);
+                return cb(new Error('AUTO_CREATE_DISABLED'), null);
               }
-              
-              console.log(`[OIDC] Creating new user for email: ${email}`);
 
               // Create new user
               const userId = uuidv4();
@@ -129,7 +121,7 @@ export async function loadOIDCStrategies() {
                       && error.message.includes('user_key')) {
                     retries++;
                     if (retries >= maxRetries) {
-                      return done(new Error('Failed to create user. Please try again.'), null);
+                      return cb(new Error('Failed to create user. Please try again.'), null);
                     }
                     userKey = await generateUserKey();
                     continue; // Retry with new key
@@ -140,8 +132,7 @@ export async function loadOIDCStrategies() {
               }
 
               user = await queryOne('SELECT * FROM users WHERE id = ?', [userId]);
-              console.log(`[OIDC] User created successfully:`, { id: user?.id, email: user?.email });
-              return done(null, user);
+              return cb(null, user);
             } catch (error: any) {
               console.error(`[OIDC] Error during user creation/update:`, {
                 message: error.message,
@@ -151,35 +142,26 @@ export async function loadOIDCStrategies() {
               
               // Handle unique constraint violation (email already exists)
               if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate'))) {
-                console.log(`[OIDC] Unique constraint violation, trying to get existing user`);
                 // Try to get the existing user by email
                 const existingUser = await queryOne('SELECT * FROM users WHERE email = ?', [profile.emails?.[0]?.value || (profile as any).email]);
                 if (existingUser) {
-                  console.log(`[OIDC] Found existing user, updating OIDC info`);
                   // Update OIDC info for existing user
                   await execute(
                     'UPDATE users SET oidc_sub = ?, oidc_provider = ? WHERE id = ?',
                     [sub, provider.provider_key, existingUser.id]
                   );
                   const updatedUser = await queryOne('SELECT * FROM users WHERE id = ?', [existingUser.id]);
-                  console.log(`[OIDC] User updated successfully:`, { id: updatedUser?.id, email: updatedUser?.email });
-                  return done(null, updatedUser);
+                  return cb(null, updatedUser);
                 }
               }
               console.error(`[OIDC] Fatal error, cannot proceed:`, error);
-              return done(error, null);
+              return cb(error, null);
             }
       };
 
       // Construct callback URL - must match exactly what's registered with the OIDC provider
       const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
       const callbackURL = `${baseUrl}/api/auth/${provider.provider_key}/callback`;
-      
-      console.log(`[OIDC] Loading strategy for provider: ${provider.provider_key}`);
-      console.log(`[OIDC] Issuer URL: ${provider.issuer_url}`);
-      console.log(`[OIDC] Callback URL: ${callbackURL}`);
-      console.log(`[OIDC] Scopes: ${provider.scopes}`);
-      console.log(`[OIDC] Auto-create users: ${provider.auto_create_users}`);
       
       // Some OIDC providers don't return ID tokens in the token response
       // passport-openidconnect will use the userInfo endpoint as fallback
@@ -200,22 +182,6 @@ export async function loadOIDCStrategies() {
         scope: provider.scopes.split(' '),
         skipUserProfile: false, // Always fetch from userInfo if needed
       };
-      
-      console.log(`[OIDC] Using endpoints:`, {
-        authorization: authorizationURL,
-        token: tokenURL,
-        userInfo: userInfoURL,
-        customEndpoints: !!(provider.authorization_url || provider.token_url || provider.userinfo_url),
-      });
-      
-      console.log(`[OIDC] Strategy config for ${provider.provider_key}:`, {
-        issuer: strategyConfig.issuer,
-        authorizationURL: strategyConfig.authorizationURL,
-        tokenURL: strategyConfig.tokenURL,
-        userInfoURL: strategyConfig.userInfoURL,
-        callbackURL: strategyConfig.callbackURL,
-        scopes: strategyConfig.scope,
-      });
       
       passport.use(
         provider.provider_key,
