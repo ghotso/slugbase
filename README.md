@@ -177,7 +177,9 @@ slugbase/
 
 ## Documentation
 
-Comprehensive documentation for all frontend pages is available in the `docs/` directory:
+📚 **Full documentation is available at: [https://slugbase.github.io/](https://slugbase.github.io/)**
+
+Comprehensive documentation for all frontend pages is also available in the `docs/` directory:
 
 - [Dashboard](./docs/Dashboard.md) - Main landing page
 - [Bookmarks](./docs/Bookmarks.md) - Bookmark management
