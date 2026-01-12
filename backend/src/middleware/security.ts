@@ -45,6 +45,10 @@ export const strictRateLimiter = isDevelopment
  * Security headers middleware
  */
 export function setupSecurityHeaders() {
+  // Only enable HSTS if we're actually using HTTPS
+  const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+  const isHttps = baseUrl.startsWith('https://');
+  
   return helmet({
     contentSecurityPolicy: {
       directives: {
@@ -60,11 +64,12 @@ export function setupSecurityHeaders() {
       },
     },
     crossOriginEmbedderPolicy: false, // Disable for compatibility
-    hsts: {
+    crossOriginOpenerPolicy: false, // Disable for compatibility (can cause issues with HTTP)
+    hsts: isHttps ? {
       maxAge: 31536000, // 1 year
       includeSubDomains: true,
       preload: true,
-    },
+    } : false, // Disable HSTS when not using HTTPS
   });
 }
 
