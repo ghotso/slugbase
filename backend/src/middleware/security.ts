@@ -15,7 +15,7 @@ export const authRateLimiter = isDevelopment
   ? noOpRateLimiter
   : rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 5, // Limit each IP to 5 requests per windowMs
+      max: 300, // Limit each IP to 300 failed auth attempts per windowMs
       message: 'Too many authentication attempts, please try again later.',
       standardHeaders: true,
       legacyHeaders: false,
@@ -26,7 +26,7 @@ export const generalRateLimiter = isDevelopment
   ? noOpRateLimiter
   : rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // Limit each IP to 100 requests per windowMs
+      max: 2000, // Limit each IP to 2000 requests per windowMs
       standardHeaders: true,
       legacyHeaders: false,
     });
@@ -35,7 +35,7 @@ export const strictRateLimiter = isDevelopment
   ? noOpRateLimiter
   : rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 10, // Limit each IP to 10 requests per windowMs
+      max: 500, // Limit each IP to 500 requests per windowMs
       message: 'Too many requests, please try again later.',
       standardHeaders: true,
       legacyHeaders: false,
