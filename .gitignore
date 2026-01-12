@@ -16,3 +16,5 @@ backend/data/
 
 # Docker Compose - use docker-compose.example.yml as template
 docker-compose.yml
+
+.cursor/
