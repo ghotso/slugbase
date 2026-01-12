@@ -10,6 +10,9 @@ jobs:
   type-check:
     name: Type Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     
     strategy:
       matrix:
@@ -36,6 +39,9 @@ jobs:
   build-check:
     name: Build Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     
     steps:
       - name: Checkout repository
@@ -64,6 +70,9 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     
     steps:
       - name: Checkout repository
@@ -93,6 +102,9 @@ jobs:
   all-checks:
     name: All Checks Summary
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     needs: [type-check, build-check, security-audit]
     
     steps:
