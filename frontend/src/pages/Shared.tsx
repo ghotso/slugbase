@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 import { useToast } from '../components/ui/Toast';
@@ -40,7 +40,6 @@ export default function Shared() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { showToast } = useToast();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [bookmarks, setBookmarks] = useState<SharedBookmark[]>([]);
   const [folders, setFolders] = useState<SharedFolder[]>([]);
