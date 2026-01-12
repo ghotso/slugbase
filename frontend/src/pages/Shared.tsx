@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 import { useToast } from '../components/ui/Toast';
@@ -39,25 +40,28 @@ export default function Shared() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [bookmarks, setBookmarks] = useState<SharedBookmark[]>([]);
   const [folders, setFolders] = useState<SharedFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'bookmarks' | 'folders'>('bookmarks');
+  const selectedFolderId = searchParams.get('folder_id') || '';
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [selectedFolderId]);
 
   async function loadData() {
     try {
       const [bookmarksRes, foldersRes] = await Promise.all([
-        api.get('/bookmarks'),
+        api.get('/bookmarks', { params: { folder_id: selectedFolderId || undefined } }),
         api.get('/folders'),
       ]);
       
       // Filter to only shared items (not owned by current user)
-      const sharedBookmarks = bookmarksRes.data.filter((b: SharedBookmark) => b.user_id !== user?.id);
-      const sharedFolders = foldersRes.data.filter((f: SharedFolder) => f.user_id !== user?.id);
+      const sharedBookmarks = bookmarksRes.data.filter((b: SharedBookmark) => b.user_id !== user?.id && (b as any).bookmark_type === 'shared');
+      const sharedFolders = foldersRes.data.filter((f: SharedFolder) => f.user_id !== user?.id && (f as any).folder_type === 'shared');
       
       setBookmarks(sharedBookmarks);
       setFolders(sharedFolders);
@@ -66,6 +70,11 @@ export default function Shared() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleFolderClick(folderId: string) {
+    setSearchParams({ folder_id: folderId });
+    setActiveTab('bookmarks'); // Switch to bookmarks tab when filtering by folder
   }
 
   function handleCopyUrl(bookmark: SharedBookmark) {
@@ -94,6 +103,18 @@ export default function Shared() {
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {t('shared.description')}
         </p>
+        {selectedFolderId && (
+          <div className="mt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchParams({})}
+              className="text-xs"
+            >
+              {t('common.clearFilter')}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -169,7 +190,11 @@ export default function Shared() {
                     {bookmark.folders?.slice(0, 2).map((folder) => (
                       <span
                         key={folder.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFolderClick(folder.id);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                       >
                         <FolderIcon iconName={(folder as any).icon} size={12} className="text-blue-700 dark:text-blue-300" />
                         {folder.name}
@@ -232,7 +257,8 @@ export default function Shared() {
             {folders.map((folder) => (
               <div
                 key={folder.id}
-                className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col"
+                onClick={() => handleFolderClick(folder.id)}
+                className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer"
               >
                 <div className="p-5 space-y-3 flex-1 flex flex-col">
                   {/* Header with icon */}

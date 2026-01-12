@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, Copy, ExternalLink, Share2, Tag as TagIcon } from '
 import BookmarkModal from '../components/modals/BookmarkModal';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
+import Tooltip from '../components/ui/Tooltip';
 import Favicon from '../components/Favicon';
 import FolderIcon from '../components/FolderIcon';
 
@@ -22,12 +23,14 @@ interface Bookmark {
   folders?: Array<{ id: string; name: string; icon?: string | null }>;
   tags?: Array<{ id: string; name: string }>;
   shared_teams?: Array<{ id: string; name: string }>;
+  shared_users?: Array<{ id: string; name: string; email: string }>;
   bookmark_type?: 'own' | 'shared';
 }
 
 export default function Bookmarks() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showConfirm, dialogState } = useConfirmDialog();
   const { showToast } = useToast();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -35,8 +38,8 @@ export default function Bookmarks() {
   const [tags, setTags] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFolder, setSelectedFolder] = useState<string>('');
-  const [selectedTag, setSelectedTag] = useState<string>('');
+  const selectedFolder = searchParams.get('folder_id') || '';
+  const selectedTag = searchParams.get('tag_id') || '';
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null);
 
@@ -52,7 +55,9 @@ export default function Bookmarks() {
         api.get('/tags'),
         api.get('/teams'),
       ]);
-      setBookmarks(bookmarksRes.data);
+      // Filter to only show own bookmarks (not shared)
+      const ownBookmarks = bookmarksRes.data.filter((b: Bookmark) => b.bookmark_type === 'own');
+      setBookmarks(ownBookmarks);
       setFolders(foldersRes.data);
       setTags(tagsRes.data);
       setTeams(teamsRes.data);
@@ -138,11 +143,19 @@ export default function Bookmarks() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3">
         <div className="flex-1 min-w-[200px]">
           <Select
             value={selectedFolder}
-            onChange={setSelectedFolder}
+            onChange={(value) => {
+              const params = new URLSearchParams(searchParams);
+              if (value) {
+                params.set('folder_id', value);
+              } else {
+                params.delete('folder_id');
+              }
+              setSearchParams(params);
+            }}
             options={folderOptions}
             placeholder={t('bookmarks.filterByFolder')}
           />
@@ -150,7 +163,15 @@ export default function Bookmarks() {
         <div className="flex-1 min-w-[200px]">
           <Select
             value={selectedTag}
-            onChange={setSelectedTag}
+            onChange={(value) => {
+              const params = new URLSearchParams(searchParams);
+              if (value) {
+                params.set('tag_id', value);
+              } else {
+                params.delete('tag_id');
+              }
+              setSearchParams(params);
+            }}
             options={tagOptions}
             placeholder={t('bookmarks.filterByTag')}
           />
@@ -182,11 +203,33 @@ export default function Bookmarks() {
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1.5">
                       {bookmark.title}
                     </h3>
-                    {bookmark.bookmark_type === 'shared' && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50">
-                        <Share2 className="h-3 w-3" />
-                        {t('bookmarks.shared')}
-                      </span>
+                    {bookmark.shared_teams && bookmark.shared_teams.length > 0 && (
+                      <Tooltip
+                        content={
+                          <div className="space-y-1">
+                            <div className="font-semibold mb-1">{t('bookmarks.sharedWith')}</div>
+                            {bookmark.shared_teams.map((team) => (
+                              <div key={team.id} className="text-xs">
+                                • {team.name}
+                              </div>
+                            ))}
+                            {bookmark.shared_users && bookmark.shared_users.length > 0 && (
+                              <>
+                                {bookmark.shared_users.map((user) => (
+                                  <div key={user.id} className="text-xs">
+                                    • {user.name || user.email}
+                                  </div>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        }
+                      >
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50 cursor-help">
+                          <Share2 className="h-3 w-3" />
+                          {t('bookmarks.shared')}
+                        </span>
+                      </Tooltip>
                     )}
                   </div>
                 </div>
@@ -197,19 +240,30 @@ export default function Bookmarks() {
                   <span className="truncate">{bookmark.url}</span>
                 </p>
 
-                {/* Tags & Folders */}
-                {((bookmark.folders && bookmark.folders.length > 0) || (bookmark.tags && bookmark.tags.length > 0) || (bookmark.shared_teams && bookmark.shared_teams.length > 0)) && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {bookmark.folders?.slice(0, 2).map((folder) => (
+                {/* Tags & Folders - Always show folder */}
+                <div className="flex flex-wrap gap-1.5">
+                  {bookmark.folders && bookmark.folders.length > 0 ? (
+                    bookmark.folders.slice(0, 2).map((folder) => (
                       <span
                         key={folder.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSearchParams({ folder_id: folder.id });
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                       >
                         <FolderIcon iconName={folder.icon} size={12} className="text-blue-700 dark:text-blue-300" />
                         {folder.name}
                       </span>
-                    ))}
-                    {bookmark.tags?.slice(0, 2).map((tag) => (
+                    ))
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400 rounded-md border border-gray-200 dark:border-gray-800/50">
+                      <FolderIcon iconName={null} size={12} className="text-gray-600 dark:text-gray-400" />
+                      {t('bookmarks.noFolder')}
+                    </span>
+                  )}
+                  {bookmark.tags && bookmark.tags.length > 0 && (
+                    bookmark.tags.slice(0, 2).map((tag) => (
                       <span
                         key={tag.id}
                         className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md border border-purple-200 dark:border-purple-800/50"
@@ -217,15 +271,9 @@ export default function Bookmarks() {
                         <TagIcon className="h-3 w-3" />
                         {tag.name}
                       </span>
-                    ))}
-                    {bookmark.shared_teams && bookmark.shared_teams.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-md border border-indigo-200 dark:border-indigo-800/50">
-                        <Share2 className="h-3 w-3" />
-                        {bookmark.shared_teams.length}
-                      </span>
-                    )}
-                  </div>
-                )}
+                    ))
+                  )}
+                </div>
 
                 {/* Forwarding URL */}
                 {bookmark.forwarding_enabled && (

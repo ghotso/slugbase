@@ -340,25 +340,28 @@ export default function BookmarkModal({
         </div>
       </form>
 
-      <SharingModal
-        isOpen={sharingModalOpen}
-        onClose={() => setSharingModalOpen(false)}
-        onSave={(sharing) => {
-          setFormData({
-            ...formData,
-            user_ids: sharing.user_ids,
-            team_ids: sharing.team_ids,
-            share_all_teams: sharing.share_all_teams,
-          });
-        }}
-        currentShares={{
-          user_ids: formData.user_ids,
-          team_ids: formData.team_ids,
-          share_all_teams: formData.share_all_teams,
-        }}
-        teams={teams}
-        type="bookmark"
-      />
+      {sharingModalOpen && (
+        <SharingModal
+          isOpen={sharingModalOpen}
+          onClose={() => setSharingModalOpen(false)}
+          onSave={(sharing) => {
+            setFormData({
+              ...formData,
+              user_ids: sharing.user_ids,
+              team_ids: sharing.team_ids,
+              share_all_teams: sharing.share_all_teams,
+            });
+            setSharingModalOpen(false);
+          }}
+          currentShares={{
+            user_ids: formData.user_ids,
+            team_ids: formData.team_ids,
+            share_all_teams: formData.share_all_teams,
+          }}
+          teams={teams}
+          type="bookmark"
+        />
+      )}
     </Modal>
   );
 }
