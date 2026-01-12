@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../api/client';
 import { LogIn, Key } from 'lucide-react';
@@ -9,6 +9,7 @@ import Button from '../components/ui/Button';
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [providers, setProviders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +25,23 @@ export default function Login() {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    // Check for OIDC error in URL query parameters
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      if (errorParam === 'auth_failed') {
+        setError(t('auth.oidcAuthFailed'));
+      } else if (errorParam === 'auto_create_disabled') {
+        setError(t('auth.oidcAutoCreateDisabled'));
+      } else {
+        setError(t('auth.loginFailed'));
+      }
+      // Remove error from URL
+      searchParams.delete('error');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, t]);
 
   useEffect(() => {
     api.get('/auth/providers')

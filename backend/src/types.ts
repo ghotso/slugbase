@@ -17,7 +17,12 @@ export interface OIDCProvider {
   client_id: string;
   client_secret: string;
   issuer_url: string;
+  authorization_url?: string;
+  token_url?: string;
+  userinfo_url?: string;
   scopes: string;
+  auto_create_users: boolean;
+  default_role: string;
   created_at: string;
 }
 

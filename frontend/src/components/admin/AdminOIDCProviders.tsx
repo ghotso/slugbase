@@ -11,10 +11,14 @@ interface OIDCProvider {
   id: string;
   provider_key: string;
   issuer_url: string;
+  authorization_url?: string;
+  token_url?: string;
+  userinfo_url?: string;
   scopes: string;
   auto_create_users: boolean;
   default_role: string;
   created_at: string;
+  callback_url?: string;
 }
 
 export default function AdminOIDCProviders() {
@@ -118,6 +122,25 @@ export default function AdminOIDCProviders() {
                   <Globe className="h-4 w-4" />
                   <span className="truncate">{provider.issuer_url}</span>
                 </div>
+                {(provider.authorization_url || provider.token_url || provider.userinfo_url) && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    {provider.token_url && (
+                      <div className="truncate">
+                        <span className="font-medium">Token:</span> {provider.token_url}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {provider.callback_url && (
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      {t('admin.callbackUrl')}:
+                    </div>
+                    <code className="text-xs text-gray-900 dark:text-gray-100 break-all">
+                      {provider.callback_url}
+                    </code>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   <span className="px-2.5 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg">
                     {t('admin.autoCreate')}: {provider.auto_create_users ? t('common.yes') : t('common.no')}

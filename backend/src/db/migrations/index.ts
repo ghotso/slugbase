@@ -14,6 +14,7 @@
 
 import { execute, query } from '../index.js';
 import * as migration001 from './001_migrate_slug_nullable.js';
+import * as migration002 from './002_add_oidc_custom_endpoints.js';
 
 export interface Migration {
   migrationId: string;
@@ -30,7 +31,12 @@ const migrations: Migration[] = [
     up: migration001.up,
     down: migration001.down,
   },
-  // Add new migrations here following the pattern above
+  {
+    migrationId: migration002.migrationId,
+    migrationName: migration002.migrationName,
+    up: migration002.up,
+    down: migration002.down,
+  },
 ];
 
 // Ensure migrations table exists

@@ -57,9 +57,17 @@ router.use(requireAdmin()); // Only admins can manage OIDC providers
 router.get('/', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
-    const providers = await query('SELECT id, provider_key, issuer_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers ORDER BY created_at DESC', []);
+    const providers = await query('SELECT id, provider_key, issuer_url, authorization_url, token_url, userinfo_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers ORDER BY created_at DESC', []);
     const providersList = Array.isArray(providers) ? providers : (providers ? [providers] : []);
-    res.json(providersList);
+    
+    // Add callback URL information for each provider to help with OIDC configuration
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const providersWithCallback = providersList.map((p: any) => ({
+      ...p,
+      callback_url: `${baseUrl}/api/auth/${p.provider_key}/callback`,
+    }));
+    
+    res.json(providersWithCallback);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -99,13 +107,21 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const provider = await queryOne(
-      'SELECT id, provider_key, issuer_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers WHERE id = ?',
+      'SELECT id, provider_key, issuer_url, authorization_url, token_url, userinfo_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers WHERE id = ?',
       [id]
     );
     if (!provider) {
       return res.status(404).json({ error: 'Provider not found' });
     }
-    res.json(provider);
+    
+    // Add callback URL
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const providerWithCallback = {
+      ...provider,
+      callback_url: `${baseUrl}/api/auth/${(provider as any).provider_key}/callback`,
+    };
+    
+    res.json(providerWithCallback);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -180,6 +196,9 @@ router.post('/', async (req, res) => {
       client_id,
       client_secret,
       issuer_url,
+      authorization_url,
+      token_url,
+      userinfo_url,
       scopes = 'openid profile email',
       auto_create_users = true,
       default_role = 'user'
@@ -205,14 +224,17 @@ router.post('/', async (req, res) => {
 
     const providerId = uuidv4();
     await execute(
-      `INSERT INTO oidc_providers (id, provider_key, client_id, client_secret, issuer_url, scopes, auto_create_users, default_role) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO oidc_providers (id, provider_key, client_id, client_secret, issuer_url, authorization_url, token_url, userinfo_url, scopes, auto_create_users, default_role) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         providerId,
         provider_key,
         client_id,
         encryptedSecret,
         issuer_url,
+        authorization_url || null,
+        token_url || null,
+        userinfo_url || null,
         scopes,
         auto_create_users ? 1 : 0,
         default_role
@@ -223,10 +245,18 @@ router.post('/', async (req, res) => {
     await reloadOIDCStrategies();
 
     const provider = await queryOne(
-      'SELECT id, provider_key, issuer_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers WHERE id = ?',
+      'SELECT id, provider_key, issuer_url, authorization_url, token_url, userinfo_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers WHERE id = ?',
       [providerId]
     );
-    res.status(201).json(provider);
+    
+    // Add callback URL
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const providerWithCallback = {
+      ...provider,
+      callback_url: `${baseUrl}/api/auth/${(provider as any).provider_key}/callback`,
+    };
+    
+    res.status(201).json(providerWithCallback);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -295,6 +325,9 @@ router.put('/:id', async (req, res) => {
       client_id,
       client_secret,
       issuer_url,
+      authorization_url,
+      token_url,
+      userinfo_url,
       scopes,
       auto_create_users,
       default_role
@@ -339,6 +372,18 @@ router.put('/:id', async (req, res) => {
       updates.push('issuer_url = ?');
       params.push(issuer_url);
     }
+    if (authorization_url !== undefined) {
+      updates.push('authorization_url = ?');
+      params.push(authorization_url || null);
+    }
+    if (token_url !== undefined) {
+      updates.push('token_url = ?');
+      params.push(token_url || null);
+    }
+    if (userinfo_url !== undefined) {
+      updates.push('userinfo_url = ?');
+      params.push(userinfo_url || null);
+    }
     if (scopes !== undefined) {
       updates.push('scopes = ?');
       params.push(scopes);
@@ -366,10 +411,18 @@ router.put('/:id', async (req, res) => {
     await reloadOIDCStrategies();
 
     const provider = await queryOne(
-      'SELECT id, provider_key, issuer_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers WHERE id = ?',
+      'SELECT id, provider_key, issuer_url, authorization_url, token_url, userinfo_url, scopes, auto_create_users, default_role, created_at FROM oidc_providers WHERE id = ?',
       [id]
     );
-    res.json(provider);
+    
+    // Add callback URL
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const providerWithCallback = {
+      ...provider,
+      callback_url: `${baseUrl}/api/auth/${(provider as any).provider_key}/callback`,
+    };
+    
+    res.json(providerWithCallback);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

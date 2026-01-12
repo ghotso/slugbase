@@ -9,6 +9,7 @@ import { generateToken } from '../utils/jwt.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { authRateLimiter, strictRateLimiter } from '../middleware/security.js';
 import { validateEmail, normalizeEmail, validatePassword, validateLength, sanitizeString } from '../utils/validation.js';
+import { generateUserKey } from '../utils/user-key.js';
 
 const router = Router();
 
@@ -45,7 +46,15 @@ router.get('/providers', async (req, res) => {
   try {
     const providers = await query('SELECT id, provider_key, issuer_url FROM oidc_providers', []);
     const providersList = Array.isArray(providers) ? providers : (providers ? [providers] : []);
-    res.json(providersList);
+    
+    // Add callback URL information for each provider to help with OIDC configuration
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const providersWithCallback = providersList.map((p: any) => ({
+      ...p,
+      callback_url: `${baseUrl}/api/auth/${p.provider_key}/callback`,
+    }));
+    
+    res.json(providersWithCallback);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -289,9 +298,10 @@ router.post('/logout', (req, res) => {
  *         description: Provider not found
  */
 // OIDC login route
+// Note: OIDC requires sessions for the OAuth flow, so we don't use session: false here
 router.get('/:provider', async (req, res, next) => {
   const { provider } = req.params;
-  passport.authenticate(provider, { session: false })(req, res, next);
+  passport.authenticate(provider)(req, res, next);
 });
 
 /**
@@ -324,32 +334,234 @@ router.get('/:provider', async (req, res, next) => {
  *         description: Redirect to frontend (success) or login page (error)
  */
 // OIDC callback route
+// Note: OIDC requires sessions for the OAuth flow, but we convert to JWT after authentication
 router.get('/:provider/callback', (req, res, next) => {
   const { provider } = req.params;
-  passport.authenticate(provider, { session: false }, (err: any, user: any) => {
-    if (err || !user) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+  
+  passport.authenticate(provider, async (err: any, user: any, info: any) => {
+    
+    // Handle "ID token not present" error - some providers don't return ID tokens
+    // and passport-openidconnect fails before it can use userInfo endpoint
+    if (err && err.message === 'ID token not present in token response') {
+      try {
+        // Get provider configuration from database (not from user input to prevent SSRF)
+        const providerConfig = await queryOne(
+          'SELECT issuer_url, userinfo_url FROM oidc_providers WHERE provider_key = ?',
+          [provider]
+        );
+        
+        if (!providerConfig) {
+          throw new Error('Provider configuration not found');
+        }
+        
+        const configuredIssuer = (providerConfig as any).issuer_url;
+        const configuredUserinfoUrl = (providerConfig as any).userinfo_url || `${configuredIssuer}/userinfo`;
+        
+        // Get the access token from the session (stored by passport during OAuth flow)
+        // passport-openidconnect stores it under a key like 'openidconnect:issuer'
+        // Use the configured issuer, not user input
+        const sessionKey = `openidconnect:${configuredIssuer}`;
+        const oauthState = (req.session as any)?.[sessionKey];
+        
+        if (!oauthState) {
+          // Try to find any openidconnect key in session that matches the configured issuer
+          const allKeys = Object.keys(req.session as any || {});
+          const oidcKeys = allKeys.filter((k: string) => k.startsWith('openidconnect:'));
+          
+          // Find a key that matches our configured issuer
+          const matchingKey = oidcKeys.find((k: string) => k === sessionKey);
+          
+          if (matchingKey) {
+            const matchingState = (req.session as any)?.[matchingKey];
+            
+            if (matchingState?.token_response?.access_token) {
+              const accessToken = matchingState.token_response.access_token;
+              
+              // Use the configured userinfo URL (safe, from database)
+              const userInfoResponse = await fetch(configuredUserinfoUrl, {
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Accept': 'application/json',
+                },
+              });
+              
+              if (!userInfoResponse.ok) {
+                const errorText = await userInfoResponse.text();
+                throw new Error(`UserInfo request failed: ${userInfoResponse.status} ${userInfoResponse.statusText} - ${errorText}`);
+              }
+              
+              const userInfo: any = await userInfoResponse.json();
+              
+              // Get the verify function from the strategy
+              const strategy = (passport as any)._strategies[provider];
+              if (!strategy || !strategy._verify) {
+                throw new Error('Verify function not found for provider');
+              }
+              
+              // Create a mock profile from userInfo
+              const profile = {
+                id: userInfo.sub || userInfo.id,
+                displayName: userInfo.name || userInfo.preferred_username,
+                name: userInfo.name,
+                emails: userInfo.email ? [{ value: userInfo.email }] : [],
+                email: userInfo.email,
+              };
+              
+              // Call verify function with userInfo data
+              strategy._verify(
+                configuredIssuer,
+                profile,
+                {}, // context
+                null, // idToken (not available in this flow)
+                accessToken,
+                matchingState.token_response.refresh_token,
+                {}, // params
+                (verifyErr: any, verifiedUser: any) => {
+                  if (verifyErr || !verifiedUser) {
+                    console.error(`[OIDC] Verify function error:`, verifyErr);
+                    return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+                  }
+                  
+                  // Continue with normal flow
+                  user = verifiedUser;
+                  handleSuccess();
+                }
+              );
+              
+              return; // Exit early, handleSuccess will be called from verify callback
+            }
+          }
+          
+          throw new Error('No OAuth state found in session');
+        }
+        
+        const accessToken = oauthState.token_response?.access_token;
+        if (!accessToken) {
+          throw new Error('No access token found in token response');
+        }
+        
+        // Use the configured userinfo URL (safe, from database, not user input)
+        const userInfoResponse = await fetch(configuredUserinfoUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (!userInfoResponse.ok) {
+          const errorText = await userInfoResponse.text();
+          throw new Error(`UserInfo request failed: ${userInfoResponse.status} ${userInfoResponse.statusText} - ${errorText}`);
+        }
+        
+        const userInfo: any = await userInfoResponse.json();
+        
+        // Get the verify function from the strategy
+        const strategy = (passport as any)._strategies[provider];
+        if (!strategy || !strategy._verify) {
+          throw new Error('Verify function not found for provider');
+        }
+        
+        // Create a mock profile from userInfo
+        const profile = {
+          id: userInfo.sub || userInfo.id,
+          displayName: userInfo.name || userInfo.preferred_username,
+          name: userInfo.name,
+          emails: userInfo.email ? [{ value: userInfo.email }] : [],
+          email: userInfo.email,
+        };
+        
+        // Call verify function with userInfo data
+        // Updated signature: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
+        strategy._verify(
+          configuredIssuer,
+          profile,
+          {}, // context
+          null, // idToken (not available in this flow)
+          accessToken,
+          oauthState.token_response?.refresh_token,
+          {}, // params
+          (verifyErr: any, verifiedUser: any) => {
+            if (verifyErr || !verifiedUser) {
+              console.error(`[OIDC] Verify function error:`, verifyErr);
+              return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+            }
+            
+            // Continue with normal flow
+            user = verifiedUser;
+            handleSuccess();
+          }
+        );
+        
+        return; // Exit early, handleSuccess will be called from verify callback
+      } catch (manualFetchError: any) {
+        console.error(`[OIDC] Manual userInfo fetch failed:`, {
+          message: manualFetchError.message,
+          stack: manualFetchError.stack,
+        });
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+      }
     }
+    
+    if (err || !user) {
+      // Check for specific error types
+      let errorParam = 'auth_failed';
+      if (err) {
+        // Sanitize provider for logging to prevent log injection
+        const safeProvider = String(provider || 'unknown').replace(/[^\w-]/g, '');
+        console.error('[OIDC] Authentication error', {
+          provider: safeProvider,
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+        });
+        if (err.message === 'AUTO_CREATE_DISABLED') {
+          errorParam = 'auto_create_disabled';
+        }
+      } else if (!user) {
+        // Sanitize provider for logging to prevent log injection
+        const safeProvider = String(provider || 'unknown').replace(/[^\w-]/g, '');
+        console.error('[OIDC] No user returned', {
+          provider: safeProvider,
+          info: info,
+        });
+      }
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${errorParam}`);
+    }
+    
+    function handleSuccess() {
 
-    // Generate JWT token for OIDC user
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      user_key: user.user_key,
-      is_admin: user.is_admin,
-    });
+      // Generate JWT token for OIDC user
+      const token = generateToken({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        user_key: user.user_key,
+        is_admin: user.is_admin,
+      });
 
-    // Set httpOnly cookie with JWT token
-    const isProduction = process.env.NODE_ENV === 'production';
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict', // Always use strict for CSRF protection
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+      // Set httpOnly cookie with JWT token
+      const isProduction = process.env.NODE_ENV === 'production';
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'strict', // Always use strict for CSRF protection
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
 
-    res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000');
+      // Destroy session since we're using JWT for authentication
+      // Session was only needed for the OAuth flow
+      req.session?.destroy((sessionErr) => {
+        if (sessionErr) {
+          console.error('Error destroying session:', sessionErr);
+        }
+        res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000');
+      });
+    }
+    
+    // If we got here normally (not from manual fetch), handle success
+    if (user) {
+      handleSuccess();
+    }
   })(req, res, next);
 });
 
@@ -444,13 +656,34 @@ router.post('/setup', strictRateLimiter, async (req, res) => {
 
     // Create first admin user
     const userId = uuidv4();
-    const userKey = generateUserKey();
+    let userKey = await generateUserKey();
     
-    await execute(
-      `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, normalizedEmail, sanitizedName, userKey, passwordHash, true] // First user is always admin
-    );
+    // Retry logic for user_key collisions (should be extremely rare)
+    let retries = 0;
+    const maxRetries = 3;
+    while (retries < maxRetries) {
+      try {
+        await execute(
+          `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [userId, normalizedEmail, sanitizedName, userKey, passwordHash, true] // First user is always admin
+        );
+        break; // Success, exit retry loop
+      } catch (error: any) {
+        // If user_key collision, generate new key and retry
+        if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate')) 
+            && error.message.includes('user_key')) {
+          retries++;
+          if (retries >= maxRetries) {
+            return res.status(500).json({ error: 'Failed to complete setup. Please try again.' });
+          }
+          userKey = await generateUserKey();
+          continue; // Retry with new key
+        }
+        // For other errors (like email duplicate), throw to outer catch
+        throw error;
+      }
+    }
 
     res.json({ message: 'Setup completed successfully. You can now log in.' });
   } catch (error: any) {
@@ -461,12 +694,6 @@ router.post('/setup', strictRateLimiter, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-function generateUserKey(): string {
-  // Use cryptographically secure random generation
-  // Generate 8 random bytes and convert to hex, take first 12 characters
-  return crypto.randomBytes(8).toString('hex').substring(0, 12);
-}
 
 /**
  * @swagger

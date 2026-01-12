@@ -1,16 +1,10 @@
 import { Router } from 'express';
-import crypto from 'crypto';
 import { query, queryOne, execute } from '../../db/index.js';
 import { AuthRequest, requireAuth, requireAdmin } from '../../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { validateEmail, normalizeEmail, validatePassword, validateLength, sanitizeString } from '../../utils/validation.js';
-
-function generateUserKey(): string {
-  // Use cryptographically secure random generation
-  // Generate 8 random bytes and convert to hex, take first 12 characters
-  return crypto.randomBytes(8).toString('hex').substring(0, 12);
-}
+import { generateUserKey } from '../../utils/user-key.js';
 
 const router = Router();
 router.use(requireAuth());
@@ -253,7 +247,7 @@ router.post('/', async (req, res) => {
     }
 
     const userId = uuidv4();
-    const userKey = generateUserKey();
+    let userKey = await generateUserKey();
     let passwordHash = null;
 
     if (password) {
@@ -264,11 +258,32 @@ router.post('/', async (req, res) => {
       passwordHash = await bcrypt.hash(password, 10);
     }
 
-    await execute(
-      `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, normalizedEmail, sanitizedName, userKey, passwordHash, is_admin]
-    );
+    // Retry logic for user_key collisions (should be extremely rare)
+    let retries = 0;
+    const maxRetries = 3;
+    while (retries < maxRetries) {
+      try {
+        await execute(
+          `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [userId, normalizedEmail, sanitizedName, userKey, passwordHash, is_admin]
+        );
+        break; // Success, exit retry loop
+      } catch (error: any) {
+        // If user_key collision, generate new key and retry
+        if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate')) 
+            && error.message.includes('user_key')) {
+          retries++;
+          if (retries >= maxRetries) {
+            return res.status(500).json({ error: 'Failed to create user. Please try again.' });
+          }
+          userKey = await generateUserKey();
+          continue; // Retry with new key
+        }
+        // For other errors (like email duplicate), throw to outer catch
+        throw error;
+      }
+    }
 
     const user = await queryOne(
       'SELECT id, email, name, user_key, is_admin, oidc_provider, language, theme, created_at FROM users WHERE id = ?',

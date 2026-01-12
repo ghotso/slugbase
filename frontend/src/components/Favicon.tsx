@@ -17,18 +17,30 @@ export default function Favicon({ url, className = '', size = 20 }: FaviconProps
     if (url) {
       setLoading(true);
       setError(false);
+      setFaviconUrl('');
       fetchFavicon(url)
         .then((favicon) => {
-          setFaviconUrl(favicon);
-          setError(false);
+          if (favicon) {
+            setFaviconUrl(favicon);
+            setError(false);
+          } else {
+            setError(true);
+            setFaviconUrl('');
+          }
           setLoading(false);
         })
         .catch(() => {
           setError(true);
+          setFaviconUrl('');
           setLoading(false);
         });
     }
   }, [url]);
+
+  const handleImageError = () => {
+    setError(true);
+    setFaviconUrl('');
+  };
 
   if (loading) {
     return (
@@ -52,7 +64,7 @@ export default function Favicon({ url, className = '', size = 20 }: FaviconProps
       alt=""
       className={`object-contain ${className}`}
       style={{ width: `${size}px`, height: `${size}px`, minWidth: `${size}px`, minHeight: `${size}px` }}
-      onError={() => setError(true)}
+      onError={handleImageError}
       loading="lazy"
     />
   );

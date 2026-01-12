@@ -28,6 +28,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
 
   useEffect(() => {
+    // Apply initial theme based on browser preference before checking auth
+    // This ensures dark mode works on login page and other public pages
+    // Only apply if user hasn't set a preference yet
+    const root = document.documentElement;
+    if (!root.dataset.userTheme) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+    }
+    
     checkAuth();
   }, []);
 
@@ -81,6 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function applyTheme(theme: string) {
     const root = document.documentElement;
+    // Mark that user has set a theme preference
+    root.dataset.userTheme = 'true';
+    
     if (theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       root.classList.add('dark');
     } else {
