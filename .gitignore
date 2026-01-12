@@ -18,3 +18,4 @@ backend/data/
 docker-compose.yml
 
 .cursor/
+PRD/
