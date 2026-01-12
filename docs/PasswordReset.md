@@ -1,3 +1,9 @@
+---
+id: password-reset
+title: Password Reset Page
+sidebar_position: 10
+---
+
 # Password Reset Page
 
 ## Overview

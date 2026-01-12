@@ -1,3 +1,9 @@
+---
+id: setup
+title: Setup Page
+sidebar_position: 2
+---
+
 # Setup Page
 
 ## Overview

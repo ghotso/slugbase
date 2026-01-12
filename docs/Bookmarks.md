@@ -1,3 +1,9 @@
+---
+id: bookmarks
+title: Bookmarks Page
+sidebar_position: 4
+---
+
 # Bookmarks Page
 
 ## Overview

@@ -1,3 +1,9 @@
+---
+id: folders
+title: Folders Page
+sidebar_position: 5
+---
+
 # Folders Page
 
 ## Overview

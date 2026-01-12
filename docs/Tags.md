@@ -1,3 +1,9 @@
+---
+id: tags
+title: Tags Page
+sidebar_position: 6
+---
+
 # Tags Page
 
 ## Overview

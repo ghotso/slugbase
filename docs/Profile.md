@@ -1,3 +1,9 @@
+---
+id: profile
+title: Profile Page
+sidebar_position: 8
+---
+
 # Profile Page
 
 ## Overview

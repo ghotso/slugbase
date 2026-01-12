@@ -1,3 +1,9 @@
+---
+id: search-engine-guide
+title: Search Engine Guide
+sidebar_position: 11
+---
+
 # Search Engine Guide Page
 
 ## Overview

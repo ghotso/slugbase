@@ -1,3 +1,9 @@
+---
+id: admin
+title: Admin Page
+sidebar_position: 12
+---
+
 # Admin Page
 
 ## Overview
