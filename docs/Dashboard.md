@@ -1,3 +1,9 @@
+---
+id: dashboard
+title: Dashboard Page
+sidebar_position: 3
+---
+
 # Dashboard Page
 
 ## Overview

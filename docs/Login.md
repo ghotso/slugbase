@@ -1,3 +1,9 @@
+---
+id: login
+title: Login Page
+sidebar_position: 9
+---
+
 # Login Page
 
 ## Overview

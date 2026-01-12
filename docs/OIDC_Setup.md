@@ -1,3 +1,9 @@
+---
+id: oidc-setup
+title: OIDC Provider Setup Guide
+sidebar_position: 13
+---
+
 # OIDC Provider Setup Guide
 
 This guide explains how to configure OIDC (OpenID Connect) providers for SlugBase, including GitHub and Google Workspace.

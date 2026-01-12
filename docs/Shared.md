@@ -1,3 +1,9 @@
+---
+id: shared
+title: Shared Page
+sidebar_position: 7
+---
+
 # Shared Page
 
 ## Overview
