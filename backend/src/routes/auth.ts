@@ -344,29 +344,41 @@ router.get('/:provider/callback', (req, res, next) => {
     // and passport-openidconnect fails before it can use userInfo endpoint
     if (err && err.message === 'ID token not present in token response') {
       try {
+        // Get provider configuration from database (not from user input to prevent SSRF)
+        const providerConfig = await queryOne(
+          'SELECT issuer_url, userinfo_url FROM oidc_providers WHERE provider_key = ?',
+          [provider]
+        );
+        
+        if (!providerConfig) {
+          throw new Error('Provider configuration not found');
+        }
+        
+        const configuredIssuer = (providerConfig as any).issuer_url;
+        const configuredUserinfoUrl = (providerConfig as any).userinfo_url || `${configuredIssuer}/userinfo`;
+        
         // Get the access token from the session (stored by passport during OAuth flow)
         // passport-openidconnect stores it under a key like 'openidconnect:issuer'
-        const issuer = req.query.iss as string || 'https://auth.guggiraid.com';
-        const sessionKey = `openidconnect:${issuer}`;
+        // Use the configured issuer, not user input
+        const sessionKey = `openidconnect:${configuredIssuer}`;
         const oauthState = (req.session as any)?.[sessionKey];
         
         if (!oauthState) {
-          // Try to find any openidconnect key in session
+          // Try to find any openidconnect key in session that matches the configured issuer
           const allKeys = Object.keys(req.session as any || {});
           const oidcKeys = allKeys.filter((k: string) => k.startsWith('openidconnect:'));
           
-          if (oidcKeys.length > 0) {
-            const firstKey = oidcKeys[0];
-            const firstState = (req.session as any)?.[firstKey];
+          // Find a key that matches our configured issuer
+          const matchingKey = oidcKeys.find((k: string) => k === sessionKey);
+          
+          if (matchingKey) {
+            const matchingState = (req.session as any)?.[matchingKey];
             
-            if (firstState?.token_response?.access_token) {
-              const accessToken = firstState.token_response.access_token;
-              const actualIssuer = firstKey.replace('openidconnect:', '');
+            if (matchingState?.token_response?.access_token) {
+              const accessToken = matchingState.token_response.access_token;
               
-              // Fetch user info manually
-              const userInfoUrl = `${actualIssuer}/userinfo`;
-              
-              const userInfoResponse = await fetch(userInfoUrl, {
+              // Use the configured userinfo URL (safe, from database)
+              const userInfoResponse = await fetch(configuredUserinfoUrl, {
                 headers: {
                   'Authorization': `Bearer ${accessToken}`,
                   'Accept': 'application/json',
@@ -397,11 +409,13 @@ router.get('/:provider/callback', (req, res, next) => {
               
               // Call verify function with userInfo data
               strategy._verify(
-                actualIssuer,
-                userInfo.sub || userInfo.id,
+                configuredIssuer,
                 profile,
+                {}, // context
+                null, // idToken (not available in this flow)
                 accessToken,
-                firstState.token_response.refresh_token,
+                matchingState.token_response.refresh_token,
+                {}, // params
                 (verifyErr: any, verifiedUser: any) => {
                   if (verifyErr || !verifiedUser) {
                     console.error(`[OIDC] Verify function error:`, verifyErr);
@@ -426,10 +440,8 @@ router.get('/:provider/callback', (req, res, next) => {
           throw new Error('No access token found in token response');
         }
         
-        // Fetch user info manually
-        const userInfoUrl = `${issuer}/userinfo`;
-        
-        const userInfoResponse = await fetch(userInfoUrl, {
+        // Use the configured userinfo URL (safe, from database, not user input)
+        const userInfoResponse = await fetch(configuredUserinfoUrl, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Accept': 'application/json',
@@ -461,7 +473,7 @@ router.get('/:provider/callback', (req, res, next) => {
         // Call verify function with userInfo data
         // Updated signature: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
         strategy._verify(
-          issuer,
+          configuredIssuer,
           profile,
           {}, // context
           null, // idToken (not available in this flow)
@@ -494,7 +506,10 @@ router.get('/:provider/callback', (req, res, next) => {
       // Check for specific error types
       let errorParam = 'auth_failed';
       if (err) {
-        console.error(`[OIDC] Authentication error for ${provider}:`, {
+        // Sanitize provider for logging to prevent log injection
+        const safeProvider = String(provider || 'unknown').replace(/[^\w-]/g, '');
+        console.error('[OIDC] Authentication error', {
+          provider: safeProvider,
           message: err.message,
           stack: err.stack,
           name: err.name,
@@ -503,7 +518,12 @@ router.get('/:provider/callback', (req, res, next) => {
           errorParam = 'auto_create_disabled';
         }
       } else if (!user) {
-        console.error(`[OIDC] No user returned for ${provider}. Info:`, info);
+        // Sanitize provider for logging to prevent log injection
+        const safeProvider = String(provider || 'unknown').replace(/[^\w-]/g, '');
+        console.error('[OIDC] No user returned', {
+          provider: safeProvider,
+          info: info,
+        });
       }
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${errorParam}`);
     }

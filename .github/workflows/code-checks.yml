@@ -1,0 +1,100 @@
+name: Code Quality Checks
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        workspace: [backend, frontend]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type check ${{ matrix.workspace }}
+        run: |
+          cd ${{ matrix.workspace }}
+          npx tsc --noEmit
+
+  build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build backend
+        run: npm run build --workspace=backend
+      
+      - name: Build frontend
+        run: npm run build --workspace=frontend
+      
+      - name: Verify build artifacts
+        run: |
+          test -d backend/dist && echo "Backend build successful" || (echo "Backend build failed" && exit 1)
+          test -d frontend/dist && echo "Frontend build successful" || (echo "Frontend build failed" && exit 1)
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run npm audit (root)
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Run npm audit (backend)
+        run: npm audit --workspace=backend --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Run npm audit (frontend)
+        run: npm audit --workspace=frontend --audit-level=moderate
+        continue-on-error: true
+
+  all-checks:
+    name: All Checks Summary
+    runs-on: ubuntu-latest
+    needs: [type-check, build-check, security-audit]
+    
+    steps:
+      - name: Check status
+        run: echo "All code quality checks completed successfully"
