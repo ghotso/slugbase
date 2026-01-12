@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { Shield } from 'lucide-react';
+import api from '../../api/client';
 
 interface User {
   id: string;
@@ -50,7 +51,6 @@ export default function UserModal({ user, isOpen, onClose, onSuccess }: UserModa
     setError('');
 
     try {
-      const api = (await import('../../api/client')).default;
       const payload: any = { ...formData };
       if (!payload.password) {
         delete payload.password;

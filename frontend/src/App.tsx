@@ -1,20 +1,22 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
-import Setup from './pages/Setup';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Bookmarks from './pages/Bookmarks';
-import Folders from './pages/Folders';
-import Tags from './pages/Tags';
-import Profile from './pages/Profile';
-import Admin from './pages/Admin';
-import Shared from './pages/Shared';
-import PasswordReset from './pages/PasswordReset';
-import SearchEngineGuide from './pages/SearchEngineGuide';
 import Layout from './components/Layout';
+
+// Lazy load pages for code splitting
+const Setup = lazy(() => import('./pages/Setup'));
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Bookmarks = lazy(() => import('./pages/Bookmarks'));
+const Folders = lazy(() => import('./pages/Folders'));
+const Tags = lazy(() => import('./pages/Tags'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Shared = lazy(() => import('./pages/Shared'));
+const PasswordReset = lazy(() => import('./pages/PasswordReset'));
+const SearchEngineGuide = lazy(() => import('./pages/SearchEngineGuide'));
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -93,45 +95,59 @@ function AppRoutes() {
 
   // Show setup page if system is not initialized
   if (setupStatus && !setupStatus.initialized) {
-    return <Setup />;
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-lg">{t('common.loading')}</div>
+        </div>
+      }>
+        <Setup />
+      </Suspense>
+    );
   }
 
   // System is initialized - show normal routes
   return (
-    <Routes>
-      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-      <Route path="/reset-password" element={<PasswordReset />} />
-      <Route path="/password-reset" element={<PasswordReset />} />
-      {/* Forwarding URLs: /{user_key}/{slug} - handled by backend, frontend should not catch these */}
-      <Route
-        path="/:user_key/:slug"
-        element={<ForwardingHandler />}
-      />
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="bookmarks" element={<Bookmarks />} />
-        <Route path="folders" element={<Folders />} />
-        <Route path="tags" element={<Tags />} />
-        <Route path="shared" element={<Shared />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="search-engine-guide" element={<SearchEngineGuide />} />
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">{t('common.loading')}</div>
+      </div>
+    }>
+      <Routes>
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+        <Route path="/reset-password" element={<PasswordReset />} />
+        <Route path="/password-reset" element={<PasswordReset />} />
+        {/* Forwarding URLs: /{user_key}/{slug} - handled by backend, frontend should not catch these */}
         <Route
-          path="admin"
-          element={
-            <AdminRoute>
-              <Admin />
-            </AdminRoute>
-          }
+          path="/:user_key/:slug"
+          element={<ForwardingHandler />}
         />
-      </Route>
-    </Routes>
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="bookmarks" element={<Bookmarks />} />
+          <Route path="folders" element={<Folders />} />
+          <Route path="tags" element={<Tags />} />
+          <Route path="shared" element={<Shared />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="search-engine-guide" element={<SearchEngineGuide />} />
+          <Route
+            path="admin"
+            element={
+              <AdminRoute>
+                <Admin />
+              </AdminRoute>
+            }
+          />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 

@@ -4,6 +4,7 @@ import Modal from '../ui/Modal';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
 import { Key } from 'lucide-react';
+import api from '../../api/client';
 
 interface OIDCProvider {
   id: string;
@@ -83,7 +84,6 @@ export default function OIDCProviderModal({
     setError('');
 
     try {
-      const api = (await import('../../api/client')).default;
       const payload: any = { ...formData };
       if (!payload.client_secret) {
         delete payload.client_secret;

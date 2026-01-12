@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
+import api from '../../api/client';
 
 interface Team {
   id: string;
@@ -43,7 +44,6 @@ export default function TeamModal({ team, isOpen, onClose, onSuccess }: TeamModa
     setError('');
 
     try {
-      const api = (await import('../../api/client')).default;
       if (team) {
         await api.put(`/admin/teams/${team.id}`, formData);
       } else {
