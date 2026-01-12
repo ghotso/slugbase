@@ -8,7 +8,18 @@
     "logout": "Déconnexion",
     "loginWith": "Se connecter avec {{provider}}",
     "notAuthenticated": "Non authentifié",
-    "authFailed": "Échec de l'authentification"
+    "authFailed": "Échec de l'authentification",
+    "loginFailed": "Échec de la connexion",
+    "oidcAuthFailed": "Échec de l'authentification OIDC. Veuillez réessayer.",
+    "oidcAutoCreateDisabled": "La création automatique d'utilisateur est désactivée pour ce fournisseur OIDC. Veuillez contacter un administrateur.",
+    "noProviders": "Aucun fournisseur OIDC configuré",
+    "noProvidersDescription": "Veuillez configurer un fournisseur OIDC dans les paramètres d'administration pour activer la connexion OIDC.",
+    "email": "E-mail",
+    "emailPlaceholder": "votre@email.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "or": "Ou continuer avec"
   },
   "setup": {
     "title": "Configuration initiale",

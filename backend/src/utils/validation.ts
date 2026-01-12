@@ -179,3 +179,29 @@ export function sanitizeString(input: string): string {
   // Remove null bytes and control characters
   return input.replace(/[\x00-\x1F\x7F]/g, '').trim();
 }
+
+/**
+ * Validate column name against whitelist (prevents SQL injection in dynamic queries)
+ * Use this if you ever need to build dynamic ORDER BY or SELECT clauses from user input
+ * 
+ * @param columnName - The column name to validate
+ * @param allowedColumns - Array of allowed column names
+ * @returns The validated column name if valid, null otherwise
+ */
+export function validateColumnName(columnName: string, allowedColumns: string[]): string | null {
+  if (typeof columnName !== 'string' || !columnName) {
+    return null;
+  }
+  
+  // Only allow alphanumeric, underscores, and dots (for table.column notation)
+  if (!/^[a-zA-Z0-9_.]+$/.test(columnName)) {
+    return null;
+  }
+  
+  // Check against whitelist
+  if (allowedColumns.includes(columnName)) {
+    return columnName;
+  }
+  
+  return null;
+}

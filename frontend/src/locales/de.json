@@ -10,12 +10,15 @@
     "notAuthenticated": "Nicht authentifiziert",
     "authFailed": "Authentifizierung fehlgeschlagen",
     "loginFailed": "Anmeldung fehlgeschlagen",
+    "oidcAuthFailed": "OIDC-Authentifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "oidcAutoCreateDisabled": "Die automatische Benutzererstellung ist für diesen OIDC-Provider deaktiviert. Bitte kontaktieren Sie einen Administrator.",
     "noProviders": "Keine OIDC-Provider konfiguriert",
     "noProvidersDescription": "Bitte konfigurieren Sie einen OIDC-Provider in den Administrator-Einstellungen, um die OIDC-Anmeldung zu aktivieren.",
     "email": "E-Mail",
     "emailPlaceholder": "ihre@email.com",
     "password": "Passwort",
     "passwordPlaceholder": "Geben Sie Ihr Passwort ein",
+    "forgotPassword": "Passwort vergessen?",
     "or": "Oder fortfahren mit"
   },
   "setup": {
@@ -156,6 +159,7 @@
     "clientId": "Client-ID",
     "clientSecret": "Client-Geheimnis",
     "scopes": "Berechtigungen",
+    "callbackUrl": "Callback-URL",
     "autoCreate": "Benutzer automatisch erstellen",
     "defaultRole": "Standardrolle",
     "settingKey": "Schlüssel",

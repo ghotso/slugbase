@@ -9,6 +9,7 @@ import { generateToken } from '../utils/jwt.js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { authRateLimiter, strictRateLimiter } from '../middleware/security.js';
 import { validateEmail, normalizeEmail, validatePassword, validateLength, sanitizeString } from '../utils/validation.js';
+import { generateUserKey } from '../utils/user-key.js';
 
 const router = Router();
 
@@ -45,7 +46,15 @@ router.get('/providers', async (req, res) => {
   try {
     const providers = await query('SELECT id, provider_key, issuer_url FROM oidc_providers', []);
     const providersList = Array.isArray(providers) ? providers : (providers ? [providers] : []);
-    res.json(providersList);
+    
+    // Add callback URL information for each provider to help with OIDC configuration
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const providersWithCallback = providersList.map((p: any) => ({
+      ...p,
+      callback_url: `${baseUrl}/api/auth/${p.provider_key}/callback`,
+    }));
+    
+    res.json(providersWithCallback);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -289,9 +298,13 @@ router.post('/logout', (req, res) => {
  *         description: Provider not found
  */
 // OIDC login route
+// Note: OIDC requires sessions for the OAuth flow, so we don't use session: false here
 router.get('/:provider', async (req, res, next) => {
   const { provider } = req.params;
-  passport.authenticate(provider, { session: false })(req, res, next);
+  console.log(`[OIDC] Initiating login for provider: ${provider}`);
+  console.log(`[OIDC] Request URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`);
+  console.log(`[OIDC] BASE_URL env: ${process.env.BASE_URL}`);
+  passport.authenticate(provider)(req, res, next);
 });
 
 /**
@@ -324,11 +337,37 @@ router.get('/:provider', async (req, res, next) => {
  *         description: Redirect to frontend (success) or login page (error)
  */
 // OIDC callback route
+// Note: OIDC requires sessions for the OAuth flow, but we convert to JWT after authentication
 router.get('/:provider/callback', (req, res, next) => {
   const { provider } = req.params;
-  passport.authenticate(provider, { session: false }, (err: any, user: any) => {
+  console.log(`[OIDC] Callback received for provider: ${provider}`);
+  console.log(`[OIDC] Query params:`, req.query);
+  console.log(`[OIDC] Session ID:`, req.session?.id);
+  console.log(`[OIDC] Session data:`, req.session);
+  console.log(`[OIDC] Cookies:`, req.cookies);
+  
+  passport.authenticate(provider, (err: any, user: any, info: any) => {
+    console.log(`[OIDC] Authentication result for ${provider}:`);
+    console.log(`[OIDC] Error:`, err ? err.message : 'none');
+    console.log(`[OIDC] User:`, user ? { id: user.id, email: user.email } : 'none');
+    console.log(`[OIDC] Info:`, info);
+    
     if (err || !user) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=auth_failed`);
+      // Check for specific error types
+      let errorParam = 'auth_failed';
+      if (err) {
+        console.error(`[OIDC] Authentication error for ${provider}:`, {
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+        });
+        if (err.message === 'AUTO_CREATE_DISABLED') {
+          errorParam = 'auto_create_disabled';
+        }
+      } else if (!user) {
+        console.error(`[OIDC] No user returned for ${provider}. Info:`, info);
+      }
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${errorParam}`);
     }
 
     // Generate JWT token for OIDC user
@@ -349,7 +388,14 @@ router.get('/:provider/callback', (req, res, next) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000');
+    // Destroy session since we're using JWT for authentication
+    // Session was only needed for the OAuth flow
+    req.session?.destroy((sessionErr) => {
+      if (sessionErr) {
+        console.error('Error destroying session:', sessionErr);
+      }
+      res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000');
+    });
   })(req, res, next);
 });
 
@@ -444,13 +490,34 @@ router.post('/setup', strictRateLimiter, async (req, res) => {
 
     // Create first admin user
     const userId = uuidv4();
-    const userKey = generateUserKey();
+    let userKey = await generateUserKey();
     
-    await execute(
-      `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, normalizedEmail, sanitizedName, userKey, passwordHash, true] // First user is always admin
-    );
+    // Retry logic for user_key collisions (should be extremely rare)
+    let retries = 0;
+    const maxRetries = 3;
+    while (retries < maxRetries) {
+      try {
+        await execute(
+          `INSERT INTO users (id, email, name, user_key, password_hash, is_admin) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [userId, normalizedEmail, sanitizedName, userKey, passwordHash, true] // First user is always admin
+        );
+        break; // Success, exit retry loop
+      } catch (error: any) {
+        // If user_key collision, generate new key and retry
+        if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate')) 
+            && error.message.includes('user_key')) {
+          retries++;
+          if (retries >= maxRetries) {
+            return res.status(500).json({ error: 'Failed to complete setup. Please try again.' });
+          }
+          userKey = await generateUserKey();
+          continue; // Retry with new key
+        }
+        // For other errors (like email duplicate), throw to outer catch
+        throw error;
+      }
+    }
 
     res.json({ message: 'Setup completed successfully. You can now log in.' });
   } catch (error: any) {
@@ -461,12 +528,6 @@ router.post('/setup', strictRateLimiter, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-function generateUserKey(): string {
-  // Use cryptographically secure random generation
-  // Generate 8 random bytes and convert to hex, take first 12 characters
-  return crypto.randomBytes(8).toString('hex').substring(0, 12);
-}
 
 /**
  * @swagger

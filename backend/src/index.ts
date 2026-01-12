@@ -6,6 +6,7 @@ import './load-env.js';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import session from 'express-session';
 import passport from 'passport';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -84,11 +85,38 @@ app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser()); // Parse cookies for JWT
 
+// Session middleware (required for OIDC OAuth flow)
+// Note: We use JWT for final authentication, but OIDC needs sessions for the OAuth redirect flow
+const sessionSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || 'slugbase-session-secret-change-in-production';
+// Only use secure cookies if explicitly in production AND using HTTPS
+// Check BASE_URL to determine if we're using HTTPS
+const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+const isHttps = baseUrl.startsWith('https://');
+const isProduction = process.env.NODE_ENV === 'production' && isHttps;
+
+app.use(session({
+  secret: sessionSecret,
+  resave: true, // Set to true to ensure state is saved during OAuth redirect
+  saveUninitialized: true, // Set to true to save session even if not modified (needed for OAuth state)
+  name: 'slugbase.sid', // Custom session name to avoid conflicts
+  cookie: {
+    httpOnly: true,
+    secure: isProduction, // Only secure in production with HTTPS
+    sameSite: 'lax', // Use 'lax' for OIDC redirects to work properly (allows cross-site redirects)
+    maxAge: 10 * 60 * 1000, // 10 minutes (only needed for OAuth flow)
+    path: '/', // Ensure cookie is available for all paths
+  },
+  // Store session in memory (for OAuth state only, not for user sessions)
+  // In production with multiple instances, consider using Redis or database session store
+}));
+
 // General rate limiting (applied to all routes)
 app.use(generalRateLimiter);
 
-// Passport initialization (JWT-based, no sessions)
+// Passport initialization
+// Sessions are needed for OIDC OAuth flow, but we use JWT for final authentication
 app.use(passport.initialize());
+app.use(passport.session()); // Required for OIDC to work
 setupJWT(); // Setup JWT strategy
 setupOIDC(); // Setup OIDC strategies
 

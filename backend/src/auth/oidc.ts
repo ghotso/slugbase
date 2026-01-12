@@ -1,20 +1,26 @@
 import passport from 'passport';
 import { Strategy as OpenIDConnectStrategy, Profile } from 'passport-openidconnect';
-import crypto from 'crypto';
 import { queryOne, execute, query } from '../db/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import { decrypt } from '../utils/encryption.js';
-
-function generateUserKey(): string {
-  // Use cryptographically secure random generation
-  // Generate 8 random bytes and convert to base36-like string (alphanumeric)
-  // Convert to hex first, then take first 12 characters for a good length
-  return crypto.randomBytes(8).toString('hex').substring(0, 12);
-}
+import { generateUserKey } from '../utils/user-key.js';
 
 export function setupOIDC() {
-  // No serialization needed for JWT-based auth
-  // JWT strategy handles user lookup directly
+  // Serialization for OIDC OAuth flow (sessions are only used during OAuth redirect)
+  // After OAuth completes, we convert to JWT and destroy the session
+  passport.serializeUser((user: any, done) => {
+    // Store minimal user info in session (only needed during OAuth flow)
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: string, done) => {
+    try {
+      const user = await queryOne('SELECT * FROM users WHERE id = ?', [id]);
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
+  });
 }
 
 export async function loadOIDCStrategies() {
@@ -30,10 +36,22 @@ export async function loadOIDCStrategies() {
       
       const verifyFunction = async (issuer: string, sub: string, profile: Profile, accessToken: string, refreshToken: string, done: (error: any, user?: any) => void) => {
             try {
+              console.log(`[OIDC] Verify function called for provider: ${provider.provider_key}`);
+              console.log(`[OIDC] Profile:`, {
+                id: profile.id,
+                displayName: profile.displayName,
+                emails: profile.emails,
+                name: profile.name,
+              });
+              console.log(`[OIDC] Sub:`, sub);
+              
               const email = profile.emails?.[0]?.value || (profile as any).email;
               if (!email) {
+                console.error(`[OIDC] No email found in profile for provider: ${provider.provider_key}`);
                 return done(new Error('Email is required for OIDC authentication'), null);
               }
+              
+              console.log(`[OIDC] Processing authentication for email: ${email}`);
 
               // Use email as primary identifier - check if user exists by email
               let user = await queryOne(
@@ -56,16 +74,30 @@ export async function loadOIDCStrategies() {
 
               // User doesn't exist - check if auto-creation is enabled
               // Handle both SQLite (0/1) and PostgreSQL (true/false) boolean values
-              const autoCreate = provider.auto_create_users !== false && 
-                                 provider.auto_create_users !== 0 && 
-                                 provider.auto_create_users !== '0';
+              // Also handle string representations from database queries
+              const autoCreateValue = provider.auto_create_users;
+              const autoCreate = autoCreateValue === true || 
+                                 autoCreateValue === 1 || 
+                                 autoCreateValue === '1' ||
+                                 (autoCreateValue !== false && 
+                                  autoCreateValue !== 0 && 
+                                  autoCreateValue !== '0' &&
+                                  autoCreateValue !== null &&
+                                  autoCreateValue !== undefined);
+              console.log(`[OIDC] Auto-create check for ${provider.provider_key}:`, {
+                autoCreateValue,
+                autoCreate,
+              });
               if (!autoCreate) {
-                return done(new Error('User auto-creation is disabled for this provider'), null);
+                console.error('OIDC auto-creation disabled. Provider:', provider.provider_key, 'auto_create_users:', autoCreateValue);
+                return done(new Error('AUTO_CREATE_DISABLED'), null);
               }
+              
+              console.log(`[OIDC] Creating new user for email: ${email}`);
 
               // Create new user
               const userId = uuidv4();
-              const userKey = generateUserKey();
+              let userKey = await generateUserKey();
               const name = profile.displayName || profile.name || email;
 
               // Determine user role
@@ -80,33 +112,75 @@ export async function loadOIDCStrategies() {
                 isAdmin = !userCount || parseInt((userCount as any).count) === 0;
               }
 
-              await execute(
-                `INSERT INTO users (id, email, name, user_key, is_admin, oidc_sub, oidc_provider) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [userId, email, name, userKey, isAdmin, sub, provider.provider_key]
-              );
+              // Retry logic for user_key collisions (should be extremely rare)
+              let retries = 0;
+              const maxRetries = 3;
+              while (retries < maxRetries) {
+                try {
+                  await execute(
+                    `INSERT INTO users (id, email, name, user_key, is_admin, oidc_sub, oidc_provider) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                    [userId, email, name, userKey, isAdmin, sub, provider.provider_key]
+                  );
+                  break; // Success, exit retry loop
+                } catch (error: any) {
+                  // If user_key collision, generate new key and retry
+                  if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate')) 
+                      && error.message.includes('user_key')) {
+                    retries++;
+                    if (retries >= maxRetries) {
+                      return done(new Error('Failed to create user. Please try again.'), null);
+                    }
+                    userKey = await generateUserKey();
+                    continue; // Retry with new key
+                  }
+                  // For other errors (like email duplicate), throw to outer catch
+                  throw error;
+                }
+              }
 
               user = await queryOne('SELECT * FROM users WHERE id = ?', [userId]);
+              console.log(`[OIDC] User created successfully:`, { id: user?.id, email: user?.email });
               return done(null, user);
             } catch (error: any) {
+              console.error(`[OIDC] Error during user creation/update:`, {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+              });
+              
               // Handle unique constraint violation (email already exists)
               if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate'))) {
+                console.log(`[OIDC] Unique constraint violation, trying to get existing user`);
                 // Try to get the existing user by email
                 const existingUser = await queryOne('SELECT * FROM users WHERE email = ?', [profile.emails?.[0]?.value || (profile as any).email]);
                 if (existingUser) {
+                  console.log(`[OIDC] Found existing user, updating OIDC info`);
                   // Update OIDC info for existing user
                   await execute(
                     'UPDATE users SET oidc_sub = ?, oidc_provider = ? WHERE id = ?',
                     [sub, provider.provider_key, existingUser.id]
                   );
                   const updatedUser = await queryOne('SELECT * FROM users WHERE id = ?', [existingUser.id]);
+                  console.log(`[OIDC] User updated successfully:`, { id: updatedUser?.id, email: updatedUser?.email });
                   return done(null, updatedUser);
                 }
               }
+              console.error(`[OIDC] Fatal error, cannot proceed:`, error);
               return done(error, null);
             }
       };
 
+      // Construct callback URL - must match exactly what's registered with the OIDC provider
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+      const callbackURL = `${baseUrl}/api/auth/${provider.provider_key}/callback`;
+      
+      console.log(`[OIDC] Loading strategy for provider: ${provider.provider_key}`);
+      console.log(`[OIDC] Issuer URL: ${provider.issuer_url}`);
+      console.log(`[OIDC] Callback URL: ${callbackURL}`);
+      console.log(`[OIDC] Scopes: ${provider.scopes}`);
+      console.log(`[OIDC] Auto-create users: ${provider.auto_create_users}`);
+      
       passport.use(
         provider.provider_key,
         new OpenIDConnectStrategy(
@@ -117,7 +191,7 @@ export async function loadOIDCStrategies() {
             userInfoURL: `${provider.issuer_url}/userinfo`,
             clientID: provider.client_id,
             clientSecret: decryptedSecret,
-            callbackURL: `${process.env.BASE_URL || 'http://localhost:5000'}/api/auth/${provider.provider_key}/callback`,
+            callbackURL: callbackURL,
             scope: provider.scopes.split(' '),
           },
           verifyFunction as any
