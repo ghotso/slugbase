@@ -116,7 +116,7 @@ export default function AdminUsers() {
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
                         {user.name}
                       </p>
-                      {user.is_admin && (
+                      {Boolean(user.is_admin) && (
                         <span title={t('admin.admin')}>
                           <Shield className="h-4 w-4 text-yellow-500" />
                         </span>

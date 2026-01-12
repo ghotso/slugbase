@@ -16,6 +16,10 @@ RUN npm ci --legacy-peer-deps
 COPY frontend/ ./frontend/
 COPY backend/ ./backend/
 
+# Accept commit SHA as build argument
+ARG COMMIT_SHA
+ENV COMMIT_SHA=${COMMIT_SHA}
+
 # Build both workspaces
 RUN npm run build --workspace=frontend
 RUN npm run build --workspace=backend
@@ -26,6 +30,10 @@ RUN cp /app/backend/src/db/schema.sql /app/backend/dist/db/schema.sql
 # Production image
 FROM node:20-alpine
 WORKDIR /app
+
+# Accept commit SHA as build argument and set as environment variable
+ARG COMMIT_SHA
+ENV COMMIT_SHA=${COMMIT_SHA}
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

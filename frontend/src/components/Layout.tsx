@@ -1,13 +1,16 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Suspense, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Bookmark, Folder, Tag, LogOut, Settings, Share2, Github } from 'lucide-react';
 import Button from './ui/Button';
+import api from '../api/client';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
+  const [version, setVersion] = useState<string | null>(null);
 
   const navItems = [
     { path: '/bookmarks', label: t('bookmarks.title'), icon: Bookmark },
@@ -16,6 +19,19 @@ export default function Layout() {
     { path: '/shared', label: t('shared.title'), icon: Share2 },
     ...(user?.is_admin ? [{ path: '/admin', label: t('admin.title'), icon: Settings }] : []),
   ];
+
+  useEffect(() => {
+    // Fetch version on mount
+    api.get('/version')
+      .then(res => {
+        if (res.data.commit) {
+          setVersion(res.data.commit.substring(0, 7)); // Show short commit hash
+        }
+      })
+      .catch(() => {
+        // Silently fail if version endpoint is not available
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
@@ -71,13 +87,19 @@ export default function Layout() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <Outlet />
+        <Suspense fallback={
+          <div className="min-h-[400px] flex items-center justify-center">
+            <div className="text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
+          </div>
+        }>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Footer */}
       <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center gap-3">
             <a
               href="https://github.com/ghotso/slugbase"
               target="_blank"
@@ -87,6 +109,11 @@ export default function Layout() {
             >
               <Github className="h-5 w-5" />
             </a>
+            {version && (
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                {version}
+              </span>
+            )}
           </div>
         </div>
       </footer>

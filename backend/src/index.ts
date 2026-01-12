@@ -32,6 +32,7 @@ import adminTeamRoutes from './routes/admin/teams.js';
 import adminSettingsRoutes from './routes/admin/settings.js';
 import passwordResetRoutes from './routes/password-reset.js';
 import csrfRoutes from './routes/csrf.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 // Validate required environment variables before starting
 validateEnvironmentVariables();
@@ -166,10 +167,19 @@ app.use('/api/oidc-providers', oidcProviderRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/teams', adminTeamRoutes);
 app.use('/api/admin/settings', adminSettingsRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// Version endpoint
+app.get('/api/version', (req, res) => {
+  res.json({ 
+    version: process.env.COMMIT_SHA || 'dev',
+    commit: process.env.COMMIT_SHA || null
+  });
 });
 
 // Redirect routes - handle 2-segment paths only (user_key/slug pattern)

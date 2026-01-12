@@ -6,6 +6,7 @@ import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { Plus, Edit, Trash2, Share2 } from 'lucide-react';
 import FolderModal from '../components/modals/FolderModal';
 import Button from '../components/ui/Button';
+import Tooltip from '../components/ui/Tooltip';
 import FolderIcon from '../components/FolderIcon';
 
 interface Folder {
@@ -13,6 +14,7 @@ interface Folder {
   name: string;
   icon?: string | null;
   shared_teams?: Array<{ id: string; name: string }>;
+  shared_users?: Array<{ id: string; name: string; email: string }>;
   folder_type?: 'own' | 'shared';
 }
 
@@ -35,7 +37,9 @@ export default function Folders() {
         api.get('/folders'),
         api.get('/teams'),
       ]);
-      setFolders(foldersRes.data);
+      // Filter to only show own folders (not shared)
+      const ownFolders = foldersRes.data.filter((f: Folder) => f.folder_type === 'own');
+      setFolders(ownFolders);
       setTeams(teamsRes.data);
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -126,34 +130,36 @@ export default function Folders() {
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1.5">
                       {folder.name}
                     </h3>
-                    {folder.folder_type === 'shared' && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50">
-                        <Share2 className="h-3 w-3" />
-                        {t('folders.shared')}
-                      </span>
+                    {folder.shared_teams && folder.shared_teams.length > 0 && (
+                      <Tooltip
+                        content={
+                          <div className="space-y-1">
+                            <div className="font-semibold mb-1">{t('folders.sharedWith')}</div>
+                            {folder.shared_teams.map((team) => (
+                              <div key={team.id} className="text-xs">
+                                • {team.name}
+                              </div>
+                            ))}
+                            {folder.shared_users && folder.shared_users.length > 0 && (
+                              <>
+                                {folder.shared_users.map((user) => (
+                                  <div key={user.id} className="text-xs">
+                                    • {user.name || user.email}
+                                  </div>
+                                ))}
+                              </>
+                            )}
+                          </div>
+                        }
+                      >
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50 cursor-help">
+                          <Share2 className="h-3 w-3" />
+                          {t('folders.shared')}
+                        </span>
+                      </Tooltip>
                     )}
                   </div>
                 </div>
-
-                {/* Shared Teams */}
-                {folder.shared_teams && folder.shared_teams.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {folder.shared_teams.slice(0, 2).map((team) => (
-                      <span
-                        key={team.id}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-md border border-indigo-200 dark:border-indigo-800/50"
-                      >
-                        <Share2 className="h-3 w-3" />
-                        {team.name}
-                      </span>
-                    ))}
-                    {folder.shared_teams.length > 2 && (
-                      <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-                        +{folder.shared_teams.length - 2}
-                      </span>
-                    )}
-                  </div>
-                )}
 
                 {/* Actions */}
                 {folder.folder_type === 'own' && (
