@@ -1,8 +1,8 @@
 title: SlugBase Documentation
 description: Self-hosted bookmark manager with optional link forwarding
 theme: minima
-baseurl: ""
-url: "https://slugbase.github.io"
+baseurl: "/slugbase"
+url: "https://ghotso.github.io"
 plugins:
   - jekyll-relative-links
 relative_links:

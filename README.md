@@ -177,7 +177,7 @@ slugbase/
 
 ## Documentation
 
-📚 **Full documentation is available at: [https://slugbase.github.io/](https://slugbase.github.io/)**
+📚 **Full documentation is available at: [https://ghotso.github.io/slugbase/](https://ghotso.github.io/slugbase/)**
 
 Comprehensive documentation for all frontend pages is also available in the `docs/` directory:
 
