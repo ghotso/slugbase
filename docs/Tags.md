@@ -108,7 +108,7 @@ When no tags exist:
 - A bookmark can have multiple tags
 - A tag can be associated with multiple bookmarks
 - Deleting a tag removes the tag but not the bookmarks
-- Bookmarks are shown on the [Bookmarks](./Bookmarks.md) page with tag badges
+- Bookmarks are shown on the [Bookmarks](bookmarks) page with tag badges
 
 ## Tag Naming
 
@@ -133,8 +133,8 @@ When no tags exist:
 
 ## Related Pages
 
-- [Bookmarks](./Bookmarks.md) - View bookmarks filtered by tag
-- [Folders](./Folders.md) - Folder management
+- [Bookmarks](bookmarks) - View bookmarks filtered by tag
+- [Folders](folders) - Folder management
 
 ## Technical Details
 

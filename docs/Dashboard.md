@@ -76,9 +76,9 @@ The dashboard displays three main navigation cards:
 
 ## Related Pages
 
-- [Bookmarks](./Bookmarks.md) - Main bookmark management
-- [Folders](./Folders.md) - Folder organization
-- [Tags](./Tags.md) - Tag management
+- [Bookmarks](bookmarks) - Main bookmark management
+- [Folders](folders) - Folder organization
+- [Tags](tags) - Tag management
 
 ## Technical Details
 

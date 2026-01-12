@@ -147,7 +147,7 @@ Folders support icons from the Lucide icon library:
 - Folders are associated with bookmarks through a many-to-many relationship
 - A bookmark can belong to multiple folders
 - Deleting a folder does not delete associated bookmarks
-- Bookmarks are shown on the [Bookmarks](./Bookmarks.md) page with folder badges
+- Bookmarks are shown on the [Bookmarks](bookmarks) page with folder badges
 
 ## Styling
 
@@ -166,8 +166,8 @@ Folders support icons from the Lucide icon library:
 
 ## Related Pages
 
-- [Bookmarks](./Bookmarks.md) - View bookmarks filtered by folder
-- [Shared](./Shared.md) - View shared folders
+- [Bookmarks](bookmarks) - View bookmarks filtered by folder
+- [Shared](shared) - View shared folders
 
 ## Technical Details
 

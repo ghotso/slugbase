@@ -218,8 +218,8 @@ After successful setup:
 
 ## Related Pages
 
-- [Login](./Login.md) - Post-setup authentication
-- [Admin](./Admin.md) - Admin panel (accessible after login as first user)
+- [Login](login) - Post-setup authentication
+- [Admin](admin) - Admin panel (accessible after login as first user)
 
 ## Technical Details
 

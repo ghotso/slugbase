@@ -200,8 +200,8 @@ The profile is organized into sections:
 
 ## Related Pages
 
-- [Login](./Login.md) - User authentication
-- [Admin](./Admin.md) - Admin user management
+- [Login](login) - User authentication
+- [Admin](admin) - Admin user management
 
 ## Technical Details
 
@@ -244,7 +244,7 @@ Theme selection affects:
 
 - User key is read-only (cannot be changed)
 - Email changes may require verification (depending on backend)
-- Password changes handled on separate [PasswordReset](./PasswordReset.md) page
+- Password changes handled on separate [Password Reset](password-reset) page
 - All updates require authentication
 
 ## User Experience Enhancements

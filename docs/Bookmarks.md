@@ -178,10 +178,10 @@ At the bottom of the page, a note section provides:
 
 ## Related Pages
 
-- [Folders](./Folders.md) - Folder management
-- [Tags](./Tags.md) - Tag management
-- [Shared](./Shared.md) - Shared bookmarks view
-- [SearchEngineGuide](./SearchEngineGuide.md) - Custom search engine setup
+- [Folders](folders) - Folder management
+- [Tags](tags) - Tag management
+- [Shared](shared) - Shared bookmarks view
+- [Search Engine Guide](search-engine-guide) - Custom search engine setup
 
 ## Technical Details
 

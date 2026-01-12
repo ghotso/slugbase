@@ -198,8 +198,8 @@ The custom search engine feature works by:
 
 ## Related Pages
 
-- [Bookmarks](./Bookmarks.md) - Create bookmarks with slugs
-- [Profile](./Profile.md) - View your user key
+- [Bookmarks](bookmarks) - Create bookmarks with slugs
+- [Profile](profile) - View your user key
 
 ## Technical Details
 

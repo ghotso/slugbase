@@ -212,9 +212,9 @@ The Login page provides authentication functionality for SlugBase, supporting bo
 
 ## Related Pages
 
-- [Setup](./Setup.md) - Initial system setup (if not initialized)
-- [PasswordReset](./PasswordReset.md) - Password recovery
-- [Dashboard](./Dashboard.md) - Post-login destination
+- [Setup](setup) - Initial system setup (if not initialized)
+- [Password Reset](password-reset) - Password recovery
+- [Dashboard](dashboard) - Post-login destination
 
 ## Technical Details
 

@@ -249,9 +249,9 @@ System-wide configuration:
 
 ## Related Pages
 
-- [Login](./Login.md) - User authentication
-- [Profile](./Profile.md) - User profile management
-- [Setup](./Setup.md) - Initial system setup
+- [Login](login) - User authentication
+- [Profile](profile) - User profile management
+- [Setup](setup) - Initial system setup
 
 ## Technical Details
 

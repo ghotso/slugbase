@@ -47,31 +47,31 @@ Automatic theme detection from your browser preferences, with manual toggle and 
 
 ## Getting Started
 
-1. **[Setup](./Setup.md)** - Initial configuration and creating your first admin user
-2. **[Dashboard](./Dashboard.md)** - Overview of your bookmarks and quick navigation
-3. **[Bookmarks](./Bookmarks.md)** - Managing your bookmark collection
-4. **[Folders](./Folders.md) & [Tags](./Tags.md)** - Organizing your bookmarks
-5. **[Shared](./Shared.md)** - Accessing shared content
+1. **[Setup](setup)** - Initial configuration and creating your first admin user
+2. **[Dashboard](dashboard)** - Overview of your bookmarks and quick navigation
+3. **[Bookmarks](bookmarks)** - Managing your bookmark collection
+4. **[Folders](folders) & [Tags](tags)** - Organizing your bookmarks
+5. **[Shared](shared)** - Accessing shared content
 
 ## Documentation Sections
 
 ### Core Features
-- [Setup Page](./Setup.md) - Initial system configuration
-- [Dashboard](./Dashboard.md) - Main landing page and analytics
-- [Bookmarks](./Bookmarks.md) - Bookmark management
-- [Folders](./Folders.md) - Folder organization
-- [Tags](./Tags.md) - Tag management
-- [Shared](./Shared.md) - Shared content access
+- [Setup Page](setup) - Initial system configuration
+- [Dashboard](dashboard) - Main landing page and analytics
+- [Bookmarks](bookmarks) - Bookmark management
+- [Folders](folders) - Folder organization
+- [Tags](tags) - Tag management
+- [Shared](shared) - Shared content access
 
 ### User Features
-- [Profile](./Profile.md) - Account settings and preferences
-- [Login](./Login.md) - Authentication options
-- [Password Reset](./PasswordReset.md) - Password recovery
-- [Search Engine Guide](./SearchEngineGuide.md) - Browser search integration
+- [Profile](profile) - Account settings and preferences
+- [Login](login) - Authentication options
+- [Password Reset](password-reset) - Password recovery
+- [Search Engine Guide](search-engine-guide) - Browser search integration
 
 ### Administration
-- [Admin Page](./Admin.md) - User, team, and system management
-- [OIDC Setup](./OIDC_Setup.md) - Configuring OIDC providers
+- [Admin Page](admin) - User, team, and system management
+- [OIDC Setup](oidc-setup) - Configuring OIDC providers
 
 ## Technology
 
@@ -91,4 +91,4 @@ SlugBase is designed to be self-hosted, giving you:
 
 ---
 
-Ready to get started? Begin with the [Setup Page](./Setup.md) to configure your SlugBase instance.
+Ready to get started? Begin with the [Setup Page](setup) to configure your SlugBase instance.
