@@ -15,6 +15,7 @@ if (!JWT_SECRET) {
  */
 export function setupJWT() {
   passport.use(
+    'jwt',
     new JwtStrategy(
       {
         jwtFromRequest: (req) => extractTokenFromRequest(req),
