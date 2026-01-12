@@ -173,14 +173,35 @@ router.get('/', async (req, res) => {
       );
       bookmark.tags = tags;
       
-      // Get folders for this bookmark (including icon)
+      // Get folders for this bookmark (including icon and sharing info)
       const bookmarkFolders = await query(
         `SELECT f.id, f.name, f.icon FROM folders f
          INNER JOIN bookmark_folders bf ON f.id = bf.folder_id
          WHERE bf.bookmark_id = ?`,
         [bookmark.id]
       );
-      bookmark.folders = Array.isArray(bookmarkFolders) ? bookmarkFolders : (bookmarkFolders ? [bookmarkFolders] : []);
+      const foldersList = Array.isArray(bookmarkFolders) ? bookmarkFolders : (bookmarkFolders ? [bookmarkFolders] : []);
+      
+      // Get sharing information for each folder
+      for (const folder of foldersList as any[]) {
+        const folderSharedTeams = await query(
+          `SELECT t.* FROM teams t
+           INNER JOIN folder_team_shares fts ON t.id = fts.team_id
+           WHERE fts.folder_id = ?`,
+          [folder.id]
+        );
+        folder.shared_teams = Array.isArray(folderSharedTeams) ? folderSharedTeams : (folderSharedTeams ? [folderSharedTeams] : []);
+        
+        const folderSharedUsers = await query(
+          `SELECT u.id, u.name, u.email FROM users u
+           INNER JOIN folder_user_shares fus ON u.id = fus.user_id
+           WHERE fus.folder_id = ?`,
+          [folder.id]
+        );
+        folder.shared_users = Array.isArray(folderSharedUsers) ? folderSharedUsers : (folderSharedUsers ? [folderSharedUsers] : []);
+      }
+      
+      bookmark.folders = foldersList;
       
       // Get shared teams for this bookmark
       const sharedTeams = await query(
@@ -312,13 +333,33 @@ router.get('/:id', async (req, res) => {
       [id]
     );
 
-    // Get folders for this bookmark (including icon)
+    // Get folders for this bookmark (including icon and sharing info)
     const bookmarkFolders = await query(
       `SELECT f.id, f.name, f.icon FROM folders f
        INNER JOIN bookmark_folders bf ON f.id = bf.folder_id
        WHERE bf.bookmark_id = ?`,
       [id]
     );
+    const foldersList = Array.isArray(bookmarkFolders) ? bookmarkFolders : (bookmarkFolders ? [bookmarkFolders] : []);
+    
+    // Get sharing information for each folder
+    for (const folder of foldersList as any[]) {
+      const folderSharedTeams = await query(
+        `SELECT t.* FROM teams t
+         INNER JOIN folder_team_shares fts ON t.id = fts.team_id
+         WHERE fts.folder_id = ?`,
+        [folder.id]
+      );
+      folder.shared_teams = Array.isArray(folderSharedTeams) ? folderSharedTeams : (folderSharedTeams ? [folderSharedTeams] : []);
+      
+      const folderSharedUsers = await query(
+        `SELECT u.id, u.name, u.email FROM users u
+         INNER JOIN folder_user_shares fus ON u.id = fus.user_id
+         WHERE fus.folder_id = ?`,
+        [folder.id]
+      );
+      folder.shared_users = Array.isArray(folderSharedUsers) ? folderSharedUsers : (folderSharedUsers ? [folderSharedUsers] : []);
+    }
 
     // Get shared teams for this bookmark
     const sharedTeams = await query(
@@ -337,7 +378,7 @@ router.get('/:id', async (req, res) => {
     );
 
     (bookmark as any).tags = tags;
-    (bookmark as any).folders = Array.isArray(bookmarkFolders) ? bookmarkFolders : (bookmarkFolders ? [bookmarkFolders] : []);
+    (bookmark as any).folders = foldersList;
     (bookmark as any).shared_teams = Array.isArray(sharedTeams) ? sharedTeams : (sharedTeams ? [sharedTeams] : []);
     (bookmark as any).shared_users = Array.isArray(sharedUsers) ? sharedUsers : (sharedUsers ? [sharedUsers] : []);
 

@@ -20,7 +20,7 @@ interface Bookmark {
   url: string;
   slug: string;
   forwarding_enabled: boolean;
-  folders?: Array<{ id: string; name: string; icon?: string | null }>;
+  folders?: Array<{ id: string; name: string; icon?: string | null; shared_teams?: Array<{ id: string; name: string }>; shared_users?: Array<{ id: string; name: string; email: string }> }>;
   tags?: Array<{ id: string; name: string }>;
   shared_teams?: Array<{ id: string; name: string }>;
   shared_users?: Array<{ id: string; name: string; email: string }>;
@@ -203,25 +203,41 @@ export default function Bookmarks() {
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1.5">
                       {bookmark.title}
                     </h3>
-                    {bookmark.shared_teams && bookmark.shared_teams.length > 0 && (
+                    {((bookmark.shared_teams && bookmark.shared_teams.length > 0) || 
+                      (bookmark.folders && bookmark.folders.some(f => (f.shared_teams && f.shared_teams.length > 0) || (f.shared_users && f.shared_users.length > 0)))) && (
                       <Tooltip
                         content={
                           <div className="space-y-1">
                             <div className="font-semibold mb-1">{t('bookmarks.sharedWith')}</div>
-                            {bookmark.shared_teams.map((team) => (
+                            {bookmark.shared_teams && bookmark.shared_teams.map((team) => (
                               <div key={team.id} className="text-xs">
                                 • {team.name}
                               </div>
                             ))}
-                            {bookmark.shared_users && bookmark.shared_users.length > 0 && (
-                              <>
-                                {bookmark.shared_users.map((user) => (
-                                  <div key={user.id} className="text-xs">
-                                    • {user.name || user.email}
-                                  </div>
-                                ))}
-                              </>
-                            )}
+                            {bookmark.shared_users && bookmark.shared_users.map((user) => (
+                              <div key={user.id} className="text-xs">
+                                • {user.name || user.email}
+                              </div>
+                            ))}
+                            {bookmark.folders && bookmark.folders.map((folder) => {
+                              const hasShares = (folder.shared_teams && folder.shared_teams.length > 0) || (folder.shared_users && folder.shared_users.length > 0);
+                              if (!hasShares) return null;
+                              return (
+                                <div key={folder.id} className="text-xs mt-1 pt-1 border-t border-gray-700">
+                                  <div className="font-semibold mb-0.5">{folder.name}:</div>
+                                  {folder.shared_teams && folder.shared_teams.map((team) => (
+                                    <div key={team.id} className="text-xs pl-2">
+                                      • {team.name}
+                                    </div>
+                                  ))}
+                                  {folder.shared_users && folder.shared_users.map((user) => (
+                                    <div key={user.id} className="text-xs pl-2">
+                                      • {user.name || user.email}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
                           </div>
                         }
                       >
