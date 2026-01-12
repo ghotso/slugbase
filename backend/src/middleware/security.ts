@@ -49,19 +49,28 @@ export function setupSecurityHeaders() {
   const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
   const isHttps = baseUrl.startsWith('https://');
   
+  const cspDirectives: any = {
+    defaultSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"], // Swagger UI needs inline styles
+    scriptSrc: ["'self'"],
+    imgSrc: ["'self'", "data:", "https:"], // Allow data URIs and HTTPS images (for favicons)
+    connectSrc: ["'self'"],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'self'"], // Allow iframes for Swagger UI
+  };
+  
+  // Only upgrade insecure requests when using HTTPS (set to null to disable when using HTTP)
+  if (isHttps) {
+    cspDirectives.upgradeInsecureRequests = [];
+  } else {
+    cspDirectives.upgradeInsecureRequests = null; // Explicitly disable when using HTTP
+  }
+  
   return helmet({
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"], // Swagger UI needs inline styles
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"], // Allow data URIs and HTTPS images (for favicons)
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'self'"], // Allow iframes for Swagger UI
-      },
+      directives: cspDirectives,
     },
     crossOriginEmbedderPolicy: false, // Disable for compatibility
     crossOriginOpenerPolicy: false, // Disable for compatibility (can cause issues with HTTP)
