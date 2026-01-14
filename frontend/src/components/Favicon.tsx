@@ -34,12 +34,17 @@ export default function Favicon({ url, className = '', size = 20 }: FaviconProps
           setFaviconUrl('');
           setLoading(false);
         });
+    } else {
+      setError(true);
+      setFaviconUrl('');
+      setLoading(false);
     }
   }, [url]);
 
   const handleImageError = () => {
     setError(true);
     setFaviconUrl('');
+    setLoading(false);
   };
 
   if (loading) {

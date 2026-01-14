@@ -303,7 +303,165 @@ router.get('/', async (req, res) => {
  *       401:
  *         description: Unauthorized
  */
-// Get single bookmark (own or shared)
+/**
+ * @swagger
+ * /api/bookmarks/search:
+ *   get:
+ *     summary: Search bookmarks, folders, and tags
+ *     description: Global search across bookmarks, folders, and tags
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *     responses:
+ *       200:
+ *         description: Search results
+ *       401:
+ *         description: Unauthorized
+ */
+// Search endpoint (must be before /:id route)
+router.get('/search', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const userId = authReq.user!.id;
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    const searchTerm = `%${q.toLowerCase()}%`;
+
+    // Search bookmarks
+    const bookmarkResults = await query(
+      `SELECT b.*, 'bookmark' as type,
+              CASE WHEN b.user_id = ? THEN 'own' ELSE 'shared' END as bookmark_type
+       FROM bookmarks b
+       LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
+       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
+       WHERE (b.user_id = ? OR bus.user_id = ? OR bts.team_id IN (
+         SELECT team_id FROM team_members WHERE user_id = ?
+       ))
+       AND (LOWER(b.title) LIKE ? OR LOWER(b.url) LIKE ? OR LOWER(COALESCE(b.slug, '')) LIKE ?)
+       LIMIT 10`,
+      [userId, userId, userId, userId, searchTerm, searchTerm, searchTerm]
+    );
+
+    // Search folders
+    const folderResults = await query(
+      `SELECT f.*, 'folder' as type
+       FROM folders f
+       WHERE f.user_id = ? AND LOWER(f.name) LIKE ?
+       LIMIT 5`,
+      [userId, searchTerm]
+    );
+
+    // Search tags
+    const tagResults = await query(
+      `SELECT t.*, 'tag' as type
+       FROM tags t
+       WHERE t.user_id = ? AND LOWER(t.name) LIKE ?
+       LIMIT 5`,
+      [userId, searchTerm]
+    );
+
+    // Process results
+    const results = [
+      ...bookmarkResults.map((b: any) => ({
+        id: b.id,
+        type: 'bookmark',
+        title: b.title,
+        url: b.url,
+        slug: b.slug || '',
+        forwarding_enabled: Boolean(b.forwarding_enabled),
+      })),
+      ...folderResults.map((f: any) => ({
+        id: f.id,
+        type: 'folder',
+        title: f.name,
+        icon: f.icon,
+      })),
+      ...tagResults.map((t: any) => ({
+        id: t.id,
+        type: 'tag',
+        title: t.name,
+      })),
+    ];
+
+    res.json(results);
+  } catch (error: any) {
+    console.error('Search error:', error);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/bookmarks/export:
+ *   get:
+ *     summary: Export bookmarks as JSON
+ *     description: Export all user's bookmarks as JSON
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: JSON export of bookmarks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *       401:
+ *         description: Unauthorized
+ */
+// Export bookmarks as JSON (must be before /:id route)
+router.get('/export', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const userId = authReq.user!.id;
+
+    // Get all bookmarks (similar to GET /)
+    const bookmarks = await query(
+      `SELECT DISTINCT b.*,
+              CASE WHEN b.user_id = ? THEN 'own' ELSE 'shared' END as bookmark_type
+       FROM bookmarks b
+       LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
+       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
+       WHERE b.user_id = ? OR bus.user_id = ? OR bts.team_id IN (
+         SELECT team_id FROM team_members WHERE user_id = ?
+       )
+       ORDER BY b.created_at DESC`,
+      [userId, userId, userId, userId]
+    );
+
+    // Process bookmarks (simplified - no folders/tags for export)
+    const exportData = bookmarks.map((b: any) => ({
+      title: b.title,
+      url: b.url,
+      slug: b.slug || '',
+      forwarding_enabled: Boolean(b.forwarding_enabled),
+      pinned: Boolean(b.pinned || false),
+      created_at: b.created_at,
+    }));
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="slugbase-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(exportData);
+  } catch (error: any) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: 'Export failed' });
+  }
+});
+
+// Get single bookmark (own or shared) - must be after /export and /search routes
 router.get('/:id', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
@@ -987,141 +1145,6 @@ router.delete('/:id', async (req, res) => {
  *       401:
  *         description: Unauthorized
  */
-// Search endpoint
-router.get('/search', async (req, res) => {
-  const authReq = req as AuthRequest;
-  try {
-    const userId = authReq.user!.id;
-    const { q } = req.query;
-
-    if (!q || typeof q !== 'string') {
-      return res.status(400).json({ error: 'Search query is required' });
-    }
-
-    const searchTerm = `%${q.toLowerCase()}%`;
-
-    // Search bookmarks
-    const bookmarkResults = await query(
-      `SELECT b.*, 'bookmark' as type,
-              CASE WHEN b.user_id = ? THEN 'own' ELSE 'shared' END as bookmark_type
-       FROM bookmarks b
-       LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
-       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
-       WHERE (b.user_id = ? OR bus.user_id = ? OR bts.team_id IN (
-         SELECT team_id FROM team_members WHERE user_id = ?
-       ))
-       AND (LOWER(b.title) LIKE ? OR LOWER(b.url) LIKE ? OR LOWER(COALESCE(b.slug, '')) LIKE ?)
-       LIMIT 10`,
-      [userId, userId, userId, userId, searchTerm, searchTerm, searchTerm]
-    );
-
-    // Search folders
-    const folderResults = await query(
-      `SELECT f.*, 'folder' as type
-       FROM folders f
-       WHERE f.user_id = ? AND LOWER(f.name) LIKE ?
-       LIMIT 5`,
-      [userId, searchTerm]
-    );
-
-    // Search tags
-    const tagResults = await query(
-      `SELECT t.*, 'tag' as type
-       FROM tags t
-       WHERE t.user_id = ? AND LOWER(t.name) LIKE ?
-       LIMIT 5`,
-      [userId, searchTerm]
-    );
-
-    // Process results
-    const results = [
-      ...bookmarkResults.map((b: any) => ({
-        id: b.id,
-        type: 'bookmark',
-        title: b.title,
-        url: b.url,
-        slug: b.slug || '',
-        forwarding_enabled: Boolean(b.forwarding_enabled),
-      })),
-      ...folderResults.map((f: any) => ({
-        id: f.id,
-        type: 'folder',
-        title: f.name,
-        icon: f.icon,
-      })),
-      ...tagResults.map((t: any) => ({
-        id: t.id,
-        type: 'tag',
-        title: t.name,
-      })),
-    ];
-
-    res.json(results);
-  } catch (error: any) {
-    console.error('Search error:', error);
-    res.status(500).json({ error: 'Search failed' });
-  }
-});
-
-/**
- * @swagger
- * /api/bookmarks/export:
- *   get:
- *     summary: Export bookmarks as JSON
- *     description: Export all user's bookmarks as JSON
- *     tags: [Bookmarks]
- *     security:
- *       - cookieAuth: []
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: JSON export of bookmarks
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *       401:
- *         description: Unauthorized
- */
-// Export bookmarks as JSON
-router.get('/export', async (req, res) => {
-  const authReq = req as AuthRequest;
-  try {
-    const userId = authReq.user!.id;
-
-    // Get all bookmarks (similar to GET /)
-    const bookmarks = await query(
-      `SELECT DISTINCT b.*,
-              CASE WHEN b.user_id = ? THEN 'own' ELSE 'shared' END as bookmark_type
-       FROM bookmarks b
-       LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
-       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
-       WHERE b.user_id = ? OR bus.user_id = ? OR bts.team_id IN (
-         SELECT team_id FROM team_members WHERE user_id = ?
-       )
-       ORDER BY b.created_at DESC`,
-      [userId, userId, userId, userId]
-    );
-
-    // Process bookmarks (simplified - no folders/tags for export)
-    const exportData = bookmarks.map((b: any) => ({
-      title: b.title,
-      url: b.url,
-      slug: b.slug || '',
-      forwarding_enabled: Boolean(b.forwarding_enabled),
-      pinned: Boolean(b.pinned || false),
-      created_at: b.created_at,
-    }));
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="slugbase-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
-    res.json(exportData);
-  } catch (error: any) {
-    console.error('Export error:', error);
-    res.status(500).json({ error: 'Export failed' });
-  }
-});
-
 /**
  * @swagger
  * /api/bookmarks/import:

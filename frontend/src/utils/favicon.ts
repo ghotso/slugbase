@@ -17,18 +17,19 @@ export function getFaviconUrl(url: string): string {
 
 /**
  * Fetch favicon with fallback handling
- * Returns a data URL or empty string if fetch fails
+ * Returns a favicon URL or empty string if it can't be determined
  */
 export async function fetchFavicon(url: string): Promise<string> {
-  const faviconUrl = getFaviconUrl(url);
-  if (!faviconUrl) return '';
-
   try {
-    // Use a proxy service to fetch favicon to avoid CORS issues
-    // Google's favicon service is reliable and doesn't require CORS
     const urlObj = new URL(url);
-    const domain = urlObj.hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+    const origin = urlObj.origin;
+    
+    // Try direct favicon.ico first (most reliable)
+    const directFavicon = `${origin}/favicon.ico`;
+    
+    // Return the direct favicon URL - let the browser handle loading
+    // If it fails, the component will show the fallback icon
+    return directFavicon;
   } catch {
     return '';
   }
