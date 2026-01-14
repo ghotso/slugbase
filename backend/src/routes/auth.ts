@@ -694,7 +694,37 @@ router.post('/setup', strictRateLimiter, async (req, res) => {
       }
     }
 
-    res.json({ message: 'Setup completed successfully. You can now log in.' });
+    // Automatically log in the user after successful setup
+    // Generate JWT token
+    const token = generateToken({
+      id: userId,
+      email: normalizedEmail,
+      name: sanitizedName,
+      user_key: userKey,
+      is_admin: true,
+    });
+
+    // Set httpOnly cookie with JWT token (same as login endpoint)
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const isHttps = baseUrl.startsWith('https://');
+    const isProduction = process.env.NODE_ENV === 'production' && isHttps;
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: isProduction, // Only secure when using HTTPS
+      sameSite: 'strict', // Always use strict for CSRF protection
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Return user data (same format as login endpoint)
+    res.json({
+      id: userId,
+      email: normalizedEmail,
+      name: sanitizedName,
+      user_key: userKey,
+      is_admin: true,
+      language: 'en', // Default language
+      theme: 'auto', // Default theme
+    });
   } catch (error: any) {
     // Handle unique constraint violations
     if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate'))) {

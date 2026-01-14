@@ -38,7 +38,8 @@
     "submit": "Create Admin User",
     "alreadyInitialized": "System already initialized",
     "success": "Setup completed successfully!",
-    "redirecting": "Redirecting to login..."
+    "redirecting": "Redirecting to login...",
+    "redirectingToDashboard": "Redirecting to dashboard..."
   },
   "bookmarks": {
     "title": "Bookmarks",
@@ -185,7 +186,8 @@
     "save": "Save Settings",
     "languageEnglish": "English",
     "languageGerman": "Deutsch",
-    "languageFrench": "Français"
+    "languageFrench": "Français",
+    "emailManagedByOIDC": "Email is managed by your identity provider and cannot be changed here."
   },
   "common": {
     "loading": "Loading...",
@@ -329,6 +331,23 @@
     "invalidToken": "Invalid or expired reset token",
     "passwordMismatch": "Passwords do not match",
     "backToLogin": "Back to Login"
+  },
+  "emailVerification": {
+    "verifying": "Verifying Email",
+    "verifyingDescription": "Please wait while we verify your email address...",
+    "success": "Email Verified",
+    "successDescription": "Your email address has been successfully changed to {{email}}.",
+    "error": "Verification Failed",
+    "errorDescription": "The verification link is invalid or has expired.",
+    "tokenRequired": "Verification token is required",
+    "invalidToken": "Invalid or expired verification token",
+    "verifyFailed": "Failed to verify token",
+    "confirmFailed": "Failed to confirm email verification",
+    "redirecting": "Redirecting to profile...",
+    "backToProfile": "Back to Profile",
+    "emailSent": "Verification email sent! Please check your new email address.",
+    "pendingTitle": "Email Verification Pending",
+    "pendingDescription": "A verification email has been sent to {{email}}. Please check your inbox and click the verification link to complete the change."
   },
   "smtp": {
     "title": "SMTP Email Configuration",

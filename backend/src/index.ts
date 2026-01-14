@@ -31,8 +31,10 @@ import adminUserRoutes from './routes/admin/users.js';
 import adminTeamRoutes from './routes/admin/teams.js';
 import adminSettingsRoutes from './routes/admin/settings.js';
 import passwordResetRoutes from './routes/password-reset.js';
+import emailVerificationRoutes from './routes/email-verification.js';
 import csrfRoutes from './routes/csrf.js';
 import dashboardRoutes from './routes/dashboard.js';
+import { DatabaseSessionStore } from './utils/session-store.js';
 
 // Validate required environment variables before starting
 validateEnvironmentVariables();
@@ -95,11 +97,15 @@ const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
 const isHttps = baseUrl.startsWith('https://');
 const isProduction = process.env.NODE_ENV === 'production' && isHttps;
 
+// Initialize database-backed session store
+const sessionStore = new DatabaseSessionStore();
+
 app.use(session({
   secret: sessionSecret,
-  resave: true, // Set to true to ensure state is saved during OAuth redirect
+  resave: false, // Database store handles this
   saveUninitialized: true, // Set to true to save session even if not modified (needed for OAuth state)
   name: 'slugbase.sid', // Custom session name to avoid conflicts
+  store: sessionStore, // Use database-backed store instead of MemoryStore
   cookie: {
     httpOnly: true,
     secure: isProduction, // Only secure in production with HTTPS
@@ -107,8 +113,6 @@ app.use(session({
     maxAge: 10 * 60 * 1000, // 10 minutes (only needed for OAuth flow)
     path: '/', // Ensure cookie is available for all paths
   },
-  // Store session in memory (for OAuth state only, not for user sessions)
-  // In production with multiple instances, consider using Redis or database session store
 }));
 
 // General rate limiting (applied to all routes)
@@ -158,6 +162,7 @@ app.use((req: any, res: any, next: any) => {
 // All other routes
 app.use('/api/auth', authRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/tags', tagRoutes);

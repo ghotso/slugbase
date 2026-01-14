@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { CheckCircle, UserPlus, Shield } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 export default function Setup() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { user, checkAuth } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     name: '',
@@ -15,6 +19,13 @@ export default function Setup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // If user is already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +47,16 @@ export default function Setup() {
     try {
       const { confirmPassword, ...dataToSend } = formData;
       await api.post('/auth/setup', dataToSend);
+      
+      // User is automatically logged in by the backend (cookie is set)
+      // Check auth status to update AuthContext
+      await checkAuth();
+      
       setSuccess(true);
+      // Redirect to dashboard after a brief delay
       setTimeout(() => {
-        window.location.href = '/login';
-      }, 2000);
+        navigate('/dashboard');
+      }, 1500);
     } catch (err: any) {
       setError(err.response?.data?.error || t('common.error'));
     } finally {
@@ -59,7 +76,7 @@ export default function Setup() {
               {t('setup.success')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
-              {t('setup.redirecting')}
+              {t('setup.redirectingToDashboard')}
             </p>
           </div>
         </div>

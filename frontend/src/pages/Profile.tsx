@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { Copy, Check, Mail, User as UserIcon, Key, Globe, Palette } from 'lucide-react';
+import { Copy, Check, Mail, User as UserIcon, Key, Globe, Palette, AlertCircle } from 'lucide-react';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
+import { useToast } from '../components/ui/Toast';
 
 export default function Profile() {
   const { t } = useTranslation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, checkAuth } = useAuth();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     email: '',
     name: '',
@@ -36,9 +38,19 @@ export default function Profile() {
     setSaving(true);
     setErrors({});
     try {
-      await updateUser(formData);
-      setEditingEmail(false);
-      setEditingName(false);
+      const response = await updateUser(formData) as any;
+      
+      // Check if email verification is required
+      if (response?.emailVerificationRequired) {
+        showToast(t('emailVerification.emailSent'), 'success');
+        setEditingEmail(false);
+        // Refresh user data to get email_pending
+        await checkAuth();
+      } else {
+        setEditingEmail(false);
+        setEditingName(false);
+        showToast(t('common.success'), 'success');
+      }
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       if (error.response?.data?.error) {
@@ -50,6 +62,9 @@ export default function Profile() {
         } else {
           setErrors({ email: errorMessage, name: errorMessage });
         }
+        showToast(errorMessage, 'error');
+      } else {
+        showToast(t('common.error'), 'error');
       }
     } finally {
       setSaving(false);
@@ -154,16 +169,38 @@ export default function Profile() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.email}</p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingEmail(true)}
-                      >
-                        {t('common.edit')}
-                      </Button>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.email}</p>
+                        {!user.oidc_provider && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingEmail(true)}
+                          >
+                            {t('common.edit')}
+                          </Button>
+                        )}
+                      </div>
+                      {user.oidc_provider && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {t('profile.emailManagedByOIDC')}
+                        </p>
+                      )}
+                      {user.email_pending && (
+                        <div className="flex items-start gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-blue-800 dark:text-blue-200 font-medium">
+                              {t('emailVerification.pendingTitle')}
+                            </p>
+                            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                              {t('emailVerification.pendingDescription', { email: user.email_pending })}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -277,7 +314,7 @@ export default function Profile() {
         </div>
 
         {/* Preferences Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="p-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               {t('profile.preferences')}

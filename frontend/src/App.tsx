@@ -16,6 +16,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Shared = lazy(() => import('./pages/Shared'));
 const PasswordReset = lazy(() => import('./pages/PasswordReset'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const SearchEngineGuide = lazy(() => import('./pages/SearchEngineGuide'));
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -117,6 +118,7 @@ function AppRoutes() {
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
         <Route path="/reset-password" element={<PasswordReset />} />
         <Route path="/password-reset" element={<PasswordReset />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         {/* Forwarding URLs: /{user_key}/{slug} - handled by backend, frontend should not catch these */}
         <Route
           path="/:user_key/:slug"
