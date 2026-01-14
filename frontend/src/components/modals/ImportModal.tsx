@@ -35,13 +35,47 @@ export default function ImportModal({ isOpen, onClose, onSuccess }: ImportModalP
         bookmarks = Array.isArray(data) ? data : [data];
       } else if (file.name.endsWith('.html')) {
         // HTML/Netscape bookmark format
+        // Use DOMParser in a safe way - only extract text content and validate URLs
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, 'text/html');
         const links = doc.querySelectorAll('a');
-        bookmarks = Array.from(links).map((link) => ({
-          title: link.textContent || '',
-          url: link.getAttribute('href') || '',
-        }));
+        bookmarks = Array.from(links)
+          .map((link) => {
+            // Extract text content (safe - already text, not HTML)
+            const title = (link.textContent || '').trim();
+            // Extract href and validate
+            const href = link.getAttribute('href') || '';
+            
+            // Validate URL to prevent XSS via javascript: or data: protocols
+            if (href) {
+              const lowerHref = href.toLowerCase().trim();
+              // Block dangerous protocols
+              if (lowerHref.startsWith('javascript:') || 
+                  lowerHref.startsWith('data:') || 
+                  lowerHref.startsWith('vbscript:') ||
+                  lowerHref.startsWith('file:')) {
+                return null; // Skip invalid URLs
+              }
+              
+              // Try to validate as proper URL
+              try {
+                const url = new URL(href, window.location.origin);
+                // Only allow http and https
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                  return null;
+                }
+              } catch {
+                // If URL parsing fails, skip this bookmark
+                return null;
+              }
+            }
+            
+            return {
+              title: title || '',
+              url: href || '',
+            };
+          })
+          .filter((bookmark): bookmark is { title: string; url: string } => bookmark !== null);
       } else {
         throw new Error('Unsupported file format. Please use JSON or HTML.');
       }
