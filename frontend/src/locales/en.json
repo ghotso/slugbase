@@ -122,7 +122,11 @@
     "importJson": "Import JSON",
     "importHtml": "Import HTML",
     "exportJson": "Export as JSON",
-    "exportHtml": "Export as HTML"
+    "exportHtml": "Export as HTML",
+    "importDescription": "Import bookmarks from a JSON or HTML file. JSON files should contain an array of bookmark objects with title and url fields.",
+    "selectFile": "Select File",
+    "supportedFormats": "Supported formats: JSON, HTML (Netscape bookmark format)",
+    "importSuccess": "Imported {{success}} bookmark(s), {{failed}} failed"
   },
   "folders": {
     "title": "Folders",
@@ -213,9 +217,14 @@
     "search": "Search",
     "searchPlaceholder": "Search bookmarks, folders, tags...",
     "searchShortcut": "Ctrl+K",
+    "searchShortcutHint": "Search (Ctrl+K)",
     "noResults": "No results found",
     "copy": "Copy",
-    "copied": "Copied!"
+    "copied": "Copied!",
+    "goTo": "Go to",
+    "actions": "Actions",
+    "navigation": "Navigation",
+    "quickActions": "Quick Actions"
   },
   "dashboard": {
     "bookmarksDescription": "Manage your bookmarks",

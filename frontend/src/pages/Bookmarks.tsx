@@ -6,16 +6,15 @@ import api from '../api/client';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useConfirmDialog } from '../hooks/useConfirmDialog';
 import { useToast } from '../components/ui/Toast';
-import { Plus, Edit, Trash2, Copy, ExternalLink, Share2, Tag as TagIcon, LayoutGrid, List, X, CheckSquare, Square, Download, Upload, Bookmark as BookmarkIcon, FolderPlus } from 'lucide-react';
+import { Plus, LayoutGrid, List, X, CheckSquare, Download, Upload, Bookmark as BookmarkIcon, ExternalLink, FolderPlus, Tag as TagIcon, Share2, Trash2, Copy } from 'lucide-react';
 import BookmarkModal from '../components/modals/BookmarkModal';
-import SharingModal from '../components/modals/SharingModal';
+import ImportModal from '../components/modals/ImportModal';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
-import Tooltip from '../components/ui/Tooltip';
-import Modal from '../components/ui/Modal';
-import Autocomplete from '../components/ui/Autocomplete';
-import Favicon from '../components/Favicon';
-import FolderIcon from '../components/FolderIcon';
+import BookmarkCard from '../components/bookmarks/BookmarkCard';
+import BookmarkListItem from '../components/bookmarks/BookmarkListItem';
+import BookmarkTableView from '../components/bookmarks/BookmarkTableView';
+import { BulkMoveModal, BulkTagModal, BulkShareModal } from '../components/bookmarks/BulkActionModals';
 
 interface Bookmark {
   id: string;
@@ -30,7 +29,7 @@ interface Bookmark {
   bookmark_type?: 'own' | 'shared';
   created_at?: string;
   access_count?: number;
-  last_accessed_at?: string;
+  last_accessed_at?: string | null;
   pinned?: boolean;
 }
 
@@ -61,6 +60,7 @@ export default function Bookmarks() {
   const [bulkMoveModalOpen, setBulkMoveModalOpen] = useState(false);
   const [bulkTagModalOpen, setBulkTagModalOpen] = useState(false);
   const [bulkShareModalOpen, setBulkShareModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   
   const selectedFolder = searchParams.get('folder_id') || '';
   const selectedTag = searchParams.get('tag_id') || '';
@@ -70,6 +70,53 @@ export default function Bookmarks() {
   useEffect(() => {
     loadData();
   }, [selectedFolder, selectedTag]);
+
+  // Handle query params from GlobalSearch
+  useEffect(() => {
+    const createParam = searchParams.get('create');
+    const importParam = searchParams.get('import');
+    const exportParam = searchParams.get('export');
+    
+    if (createParam === 'true') {
+      handleCreate();
+      const params = new URLSearchParams(searchParams);
+      params.delete('create');
+      setSearchParams(params, { replace: true });
+    } else if (importParam === 'true') {
+      // Trigger import modal
+      setImportModalOpen(true);
+      const params = new URLSearchParams(searchParams);
+      params.delete('import');
+      setSearchParams(params, { replace: true });
+    } else if (exportParam === 'true') {
+      // Trigger export
+      handleExport();
+      const params = new URLSearchParams(searchParams);
+      params.delete('export');
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchParams]);
+
+  function handleExport() {
+    api.get('/bookmarks/export')
+      .then(response => {
+        const dataStr = JSON.stringify(response.data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `slugbase-bookmarks-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast(t('common.success'), 'success');
+      })
+      .catch(error => {
+        console.error('Export failed:', error);
+        showToast(t('common.error'), 'error');
+      });
+  }
 
   useEffect(() => {
     localStorage.setItem('bookmarks-view-mode', viewMode);
@@ -82,7 +129,13 @@ export default function Bookmarks() {
   async function loadData() {
     try {
       const [bookmarksRes, foldersRes, tagsRes, teamsRes] = await Promise.all([
-        api.get('/bookmarks', { params: { folder_id: selectedFolder || undefined, tag_id: selectedTag || undefined } }),
+        api.get('/bookmarks', { 
+          params: { 
+            folder_id: selectedFolder || undefined, 
+            tag_id: selectedTag || undefined,
+            sort_by: sortBy 
+          } 
+        }),
         api.get('/folders'),
         api.get('/tags'),
         api.get('/teams'),
@@ -298,66 +351,46 @@ export default function Bookmarks() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t('bookmarks.title')}
-          </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-            {bookmarks.length} {bookmarks.length === 1 ? t('common.bookmark') : t('common.bookmarks')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={Upload}
-            onClick={() => {
-              // TODO: Implement import functionality
-              showToast('Import functionality coming soon', 'info');
-            }}
-            title={t('bookmarks.import')}
-          >
-            <span className="hidden sm:inline">{t('bookmarks.import')}</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={Download}
-            onClick={async () => {
-              try {
-                // Export as JSON
-                const response = await api.get('/bookmarks');
-                const dataStr = JSON.stringify(response.data, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `slugbase-bookmarks-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-                showToast(t('common.success'), 'success');
-              } catch (error) {
-                console.error('Export failed:', error);
-                showToast(t('common.error'), 'error');
-              }
-            }}
-            title={t('bookmarks.export')}
-          >
-            <span className="hidden sm:inline">{t('bookmarks.export')}</span>
-          </Button>
-          <Button onClick={handleCreate} icon={Plus}>
-            {t('bookmarks.create')}
-          </Button>
+    <div className="space-y-6 pb-24">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 -mx-4 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700 -mb-4 shadow-sm">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t('bookmarks.title')}
+            </h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              {bookmarks.length} {bookmarks.length === 1 ? t('common.bookmark') : t('common.bookmarks')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Upload}
+              onClick={() => setImportModalOpen(true)}
+              title={t('bookmarks.import')}
+            >
+              <span className="hidden sm:inline">{t('bookmarks.import')}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Download}
+              onClick={handleExport}
+              title={t('bookmarks.export')}
+            >
+              <span className="hidden sm:inline">{t('bookmarks.export')}</span>
+            </Button>
+            <Button onClick={handleCreate} icon={Plus}>
+              {t('bookmarks.create')}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Toolbar: Filters, Sort, View Modes */}
-      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      {/* Sticky Toolbar: Filters, Sort, View Modes */}
+      <div className="sticky top-[140px] z-30 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 flex-1 min-w-[200px]">
           <div className="flex-1 min-w-[180px]">
@@ -454,9 +487,9 @@ export default function Bookmarks() {
         </div>
       </div>
 
-      {/* Bulk Actions Bar */}
+      {/* Sticky Bulk Actions Bar */}
       {bulkMode && (
-        <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800 shadow-lg p-4">
           <div className="flex items-center gap-3">
             <button
               onClick={toggleSelectAll}
@@ -549,7 +582,7 @@ export default function Bookmarks() {
             <Button onClick={handleCreate} variant="primary" icon={Plus}>
               {t('bookmarks.emptyCreateFirst')}
             </Button>
-            <Button variant="secondary" icon={Upload}>
+            <Button variant="secondary" icon={Upload} onClick={() => setImportModalOpen(true)}>
               {t('bookmarks.emptyImport')}
             </Button>
             <Link to="/search-engine-guide">
@@ -576,11 +609,23 @@ export default function Bookmarks() {
               onDelete={() => handleDelete(bookmark.id, bookmark.title)}
               onCopyUrl={() => handleCopyUrl(bookmark)}
               bulkMode={bulkMode}
-              user={user}
               t={t}
             />
           ))}
         </div>
+      ) : viewMode === 'list' && !compactMode ? (
+        <BookmarkTableView
+          bookmarks={sortedBookmarks}
+          selectedBookmarks={selectedBookmarks}
+          onSelect={toggleSelectBookmark}
+          onSelectAll={toggleSelectAll}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onCopyUrl={handleCopyUrl}
+          bulkMode={bulkMode}
+          user={user}
+          t={t}
+        />
       ) : (
         <div className="space-y-2">
           {sortedBookmarks.map((bookmark) => (
@@ -637,6 +682,12 @@ export default function Bookmarks() {
         }}
       />
 
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onSuccess={loadData}
+      />
+
       {/* Bulk Move Modal */}
       {bulkMoveModalOpen && (
         <BulkMoveModal
@@ -667,6 +718,7 @@ export default function Bookmarks() {
           onClose={() => setBulkShareModalOpen(false)}
           onSave={handleBulkShare}
           teams={teams}
+          t={t}
         />
       )}
 
@@ -675,475 +727,4 @@ export default function Bookmarks() {
   );
 }
 
-// Bulk Move Modal Component
-function BulkMoveModal({
-  isOpen,
-  onClose,
-  onSave,
-  folders,
-  t,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (folderIds: string[]) => void;
-  folders: Array<{ id: string; name: string }>;
-  t: any;
-}) {
-  const [selectedFolders, setSelectedFolders] = useState<Array<{ id: string; name: string }>>([]);
-
-  function handleSave() {
-    onSave(selectedFolders.map(f => f.id));
-  }
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('bookmarks.bulkMoveToFolder')} size="md">
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {t('bookmarks.folders')}
-          </label>
-          <Autocomplete
-            value={selectedFolders}
-            onChange={setSelectedFolders}
-            options={folders}
-            placeholder={t('bookmarks.foldersDescription')}
-          />
-        </div>
-        <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={onClose} className="flex-1">
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" onClick={handleSave} className="flex-1">
-            {t('common.save')}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// Bulk Tag Modal Component
-function BulkTagModal({
-  isOpen,
-  onClose,
-  onSave,
-  tags,
-  onTagCreated,
-  t,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (tagIds: string[]) => void;
-  tags: Array<{ id: string; name: string }>;
-  onTagCreated?: (tag: { id: string; name: string }) => void;
-  t: any;
-}) {
-  const [selectedTags, setSelectedTags] = useState<Array<{ id: string; name: string }>>([]);
-
-  async function handleCreateTag(name: string): Promise<{ id: string; name: string } | null> {
-    try {
-      const response = await api.post('/tags', { name });
-      const newTag = { id: response.data.id, name: response.data.name };
-      if (onTagCreated) {
-        onTagCreated(newTag);
-      }
-      return newTag;
-    } catch {
-      return null;
-    }
-  }
-
-  function handleSave() {
-    onSave(selectedTags.map(t => t.id));
-  }
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('bookmarks.bulkAddTags')} size="md">
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {t('bookmarks.tags')}
-          </label>
-          <Autocomplete
-            value={selectedTags}
-            onChange={setSelectedTags}
-            options={tags}
-            placeholder={t('bookmarks.tags')}
-            onCreateNew={handleCreateTag}
-          />
-        </div>
-        <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={onClose} className="flex-1">
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" onClick={handleSave} className="flex-1">
-            {t('common.save')}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-// Bulk Share Modal Component
-function BulkShareModal({
-  isOpen,
-  onClose,
-  onSave,
-  teams,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (sharing: { team_ids: string[]; user_ids: string[]; share_all_teams: boolean }) => void;
-  teams: Array<{ id: string; name: string }>;
-}) {
-  return (
-    <SharingModal
-      isOpen={isOpen}
-      onClose={onClose}
-      onSave={onSave}
-      currentShares={{
-        team_ids: [],
-        user_ids: [],
-        share_all_teams: false,
-      }}
-      teams={teams}
-      type="bookmark"
-    />
-  );
-}
-
-// Bookmark Card Component
-function BookmarkCard({
-  bookmark,
-  compact,
-  selected,
-  onSelect,
-  onEdit,
-  onDelete,
-  onCopyUrl,
-  bulkMode,
-  user: _user,
-  t,
-}: {
-  bookmark: Bookmark;
-  compact: boolean;
-  selected: boolean;
-  onSelect: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onCopyUrl: () => void;
-  bulkMode: boolean;
-  user: any;
-  t: any;
-}) {
-  const totalSharedTeams = (bookmark.shared_teams?.length || 0) + 
-    (bookmark.folders?.reduce((sum, f) => sum + (f.shared_teams?.length || 0), 0) || 0);
-  const totalSharedUsers = (bookmark.shared_users?.length || 0) + 
-    (bookmark.folders?.reduce((sum, f) => sum + (f.shared_users?.length || 0), 0) || 0);
-  const isShared = totalSharedTeams > 0 || totalSharedUsers > 0;
-
-  return (
-    <div
-      className={`group bg-white dark:bg-gray-800 rounded-xl border ${
-        selected
-          ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
-          : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-      } hover:shadow-lg transition-all duration-200 flex flex-col ${compact ? 'p-3' : 'p-5'}`}
-    >
-      <div className={`space-y-3 flex-1 flex flex-col ${compact ? 'space-y-2' : ''}`}>
-        {/* Header with icon and title */}
-        <div className="flex items-start gap-3">
-          {bulkMode && (
-            <button
-              onClick={onSelect}
-              className="flex-shrink-0 mt-0.5 text-blue-600 dark:text-blue-400"
-            >
-              {selected ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
-            </button>
-          )}
-          <div className={`flex-shrink-0 ${compact ? 'w-10 h-10' : 'w-12 h-12'} rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50 overflow-hidden`}>
-            <Favicon url={bookmark.url} size={compact ? 20 : 24} />
-          </div>
-          <div className="flex-1 min-w-0 pt-0.5">
-            <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1.5`}>
-              {bookmark.title}
-            </h3>
-            {isShared && (
-              <Tooltip
-                content={
-                  <div className="space-y-1">
-                    <div className="font-semibold mb-1">{t('bookmarks.sharedWith')}</div>
-                    {bookmark.shared_teams && bookmark.shared_teams.map((team) => (
-                      <div key={team.id} className="text-xs">
-                        • {team.name}
-                      </div>
-                    ))}
-                    {bookmark.shared_users && bookmark.shared_users.map((user) => (
-                      <div key={user.id} className="text-xs">
-                        • {user.name || user.email}
-                      </div>
-                    ))}
-                    {bookmark.folders && bookmark.folders.map((folder) => {
-                      const hasShares = (folder.shared_teams && folder.shared_teams.length > 0) || (folder.shared_users && folder.shared_users.length > 0);
-                      if (!hasShares) return null;
-                      return (
-                        <div key={folder.id} className="text-xs mt-1 pt-1 border-t border-gray-700">
-                          <div className="font-semibold mb-0.5">{folder.name}:</div>
-                          {folder.shared_teams && folder.shared_teams.map((team) => (
-                            <div key={team.id} className="text-xs pl-2">
-                              • {team.name}
-                            </div>
-                          ))}
-                          {folder.shared_users && folder.shared_users.map((user) => (
-                            <div key={user.id} className="text-xs pl-2">
-                              • {user.name || user.email}
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                }
-              >
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50 cursor-help">
-                  <Share2 className="h-3 w-3" />
-                  {totalSharedTeams > 0 
-                    ? t('bookmarks.sharedWithTeams', { count: totalSharedTeams, teams: totalSharedTeams === 1 ? t('common.team') : t('common.teams') })
-                    : t('bookmarks.shared')}
-                </span>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-
-        {/* URL */}
-        <p className={`${compact ? 'text-xs' : 'text-xs'} text-gray-600 dark:text-gray-300 truncate flex items-center gap-1.5 px-1`}>
-          <ExternalLink className={`${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'} flex-shrink-0 opacity-70`} />
-          <span className="truncate">{bookmark.url}</span>
-        </p>
-
-        {/* Tags & Folders */}
-        <div className="flex flex-wrap gap-1.5">
-          {bookmark.folders && bookmark.folders.length > 0 ? (
-            bookmark.folders.slice(0, 2).map((folder) => (
-              <span
-                key={folder.id}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50`}
-              >
-                <FolderIcon iconName={folder.icon} size={12} className="text-blue-700 dark:text-blue-300" />
-                {folder.name}
-              </span>
-            ))
-          ) : (
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400 rounded-md border border-gray-200 dark:border-gray-800/50`}>
-              <FolderIcon iconName={null} size={12} className="text-gray-600 dark:text-gray-400" />
-              {t('bookmarks.noFolder')}
-            </span>
-          )}
-          {bookmark.tags && bookmark.tags.length > 0 && (
-            bookmark.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag.id}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md border border-purple-200 dark:border-purple-800/50`}
-              >
-                <TagIcon className="h-3 w-3" />
-                {tag.name}
-              </span>
-            ))
-          )}
-        </div>
-
-        {/* Forwarding URL */}
-        {bookmark.forwarding_enabled && (
-          <div className={`flex items-center gap-2 ${compact ? 'px-2 py-1.5' : 'px-3 py-2'} bg-gray-50 dark:bg-gray-900/30 rounded-lg border border-gray-200 dark:border-gray-700`}>
-            <code className={`${compact ? 'text-xs' : 'text-xs'} font-mono text-gray-700 dark:text-gray-300 truncate flex-1`}>
-              /{bookmark.slug}
-            </code>
-            <button
-              onClick={onCopyUrl}
-              className="flex-shrink-0 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title={t('bookmarks.copyUrl')}
-            >
-              <Copy className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className={`flex gap-2 pt-3 mt-auto border-t border-gray-100 dark:border-gray-700/50 ${compact ? 'pt-2' : ''}`}>
-          <a
-            href={bookmark.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1"
-          >
-            <Button variant="primary" size="sm" icon={ExternalLink} className={`w-full ${compact ? 'text-xs px-2 py-1' : 'text-xs'}`}>
-              {t('bookmarks.open')}
-            </Button>
-          </a>
-          {bookmark.bookmark_type === 'own' && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={Edit}
-                onClick={onEdit}
-                title={t('common.edit')}
-                className={`${compact ? 'px-1.5' : 'px-2'}`}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={Trash2}
-                onClick={onDelete}
-                title={t('common.delete')}
-                className={`text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ${compact ? 'px-1.5' : 'px-2'}`}
-              />
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Bookmark List Item Component
-function BookmarkListItem({
-  bookmark,
-  compact,
-  selected,
-  onSelect,
-  onEdit,
-  onDelete,
-  onCopyUrl,
-  bulkMode,
-  user,
-  t,
-}: {
-  bookmark: Bookmark;
-  compact: boolean;
-  selected: boolean;
-  onSelect: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onCopyUrl: () => void;
-  bulkMode: boolean;
-  user: any;
-  t: any;
-}) {
-  const totalSharedTeams = (bookmark.shared_teams?.length || 0) + 
-    (bookmark.folders?.reduce((sum, f) => sum + (f.shared_teams?.length || 0), 0) || 0);
-  const isShared = totalSharedTeams > 0;
-
-  return (
-    <div
-      className={`group bg-white dark:bg-gray-800 rounded-lg border ${
-        selected
-          ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
-          : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-      } hover:shadow transition-all duration-200 ${compact ? 'p-3' : 'p-4'}`}
-    >
-      <div className="flex items-center gap-4">
-        {bulkMode && (
-          <button
-            onClick={onSelect}
-            className="flex-shrink-0 text-blue-600 dark:text-blue-400"
-          >
-            {selected ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
-          </button>
-        )}
-        <div className={`flex-shrink-0 ${compact ? 'w-10 h-10' : 'w-12 h-12'} rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50 overflow-hidden`}>
-          <Favicon url={bookmark.url} size={compact ? 20 : 24} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h3 className={`${compact ? 'text-sm' : 'text-base'} font-semibold text-gray-900 dark:text-white mb-1`}>
-                {bookmark.title}
-              </h3>
-              <p className={`${compact ? 'text-xs' : 'text-sm'} text-gray-600 dark:text-gray-400 truncate mb-2`}>
-                {bookmark.url}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                {bookmark.folders && bookmark.folders.length > 0 && (
-                  bookmark.folders.slice(0, 1).map((folder) => (
-                    <span
-                      key={folder.id}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md`}
-                    >
-                      <FolderIcon iconName={folder.icon} size={12} />
-                      {folder.name}
-                    </span>
-                  ))
-                )}
-                {bookmark.tags && bookmark.tags.length > 0 && (
-                  bookmark.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag.id}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md`}
-                    >
-                      <TagIcon className="h-3 w-3" />
-                      {tag.name}
-                    </span>
-                  ))
-                )}
-                {isShared && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md">
-                    <Share2 className="h-3 w-3" />
-                    {totalSharedTeams > 0 
-                      ? t('bookmarks.sharedWithTeams', { count: totalSharedTeams, teams: totalSharedTeams === 1 ? t('common.team') : t('common.teams') })
-                      : t('bookmarks.shared')}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {bookmark.forwarding_enabled && (
-                <Tooltip content={`${window.location.origin}/${user?.user_key}/${bookmark.slug}`}>
-                  <button
-                    onClick={onCopyUrl}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    title={t('bookmarks.copyUrl')}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-              )}
-              <a
-                href={bookmark.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Button variant="primary" size="sm" icon={ExternalLink} className={compact ? 'text-xs px-2' : ''}>
-                  {t('bookmarks.open')}
-                </Button>
-              </a>
-              {bookmark.bookmark_type === 'own' && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={Edit}
-                    onClick={onEdit}
-                    title={t('common.edit')}
-                    className="px-2"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={Trash2}
-                    onClick={onDelete}
-                    title={t('common.delete')}
-                    className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 px-2"
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 

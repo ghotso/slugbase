@@ -216,7 +216,7 @@ export default function BookmarkModal({
           </div>
 
           {formData.forwarding_enabled && (
-            <>
+            <div className="animate-in slide-in-from-top-2 duration-200">
               <div>
                 <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                   {t('bookmarks.slug')} <span className="text-red-500">*</span>
@@ -230,7 +230,7 @@ export default function BookmarkModal({
                 />
               </div>
               {formData.slug && (
-                <div>
+                <div className="mt-3 animate-in slide-in-from-top-2 duration-200">
                   <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                     {t('bookmarks.forwardingPreview')}
                   </label>
@@ -258,7 +258,7 @@ export default function BookmarkModal({
                   </p>
                 </div>
               )}
-            </>
+            </div>
           )}
 
           <div>

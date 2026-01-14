@@ -24,6 +24,10 @@ Organize bookmarks using:
 - **Folders** - Group related bookmarks together
 - **Tags** - Flexible labeling system with many-to-many relationships
 - **Filters** - Quickly find bookmarks by folder, tag, or combinations
+- **Sorting** - Sort by date, alphabetically, usage, or access time
+- **Global Search** - Press `Ctrl+K` to search across bookmarks, folders, and tags
+- **View Modes** - Card view or compact list view with density controls
+- **Bulk Actions** - Select multiple bookmarks for batch operations
 
 ### 🔗 Link Forwarding (Optional)
 Expose your bookmarks as short redirect URLs using the format `/{user_key}/{slug}`. Perfect for creating memorable, shareable links.
