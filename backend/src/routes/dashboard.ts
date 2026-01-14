@@ -83,9 +83,9 @@ router.get('/stats', requireAuth, async (req, res) => {
       LEFT JOIN folder_team_shares fts ON bf.folder_id = fts.folder_id
       WHERE b.user_id != ? AND (
         bus.user_id = ?
-        OR (bts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND bts.team_id IS NOT NULL)
+        ${teamIds.length > 0 ? `OR (bts.team_id IN (${teamIds.map(() => '?').join(',')}) AND bts.team_id IS NOT NULL)` : ''}
         OR fus.user_id = ?
-        OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL AND bf.folder_id IS NOT NULL)
+        ${teamIds.length > 0 ? `OR (fts.team_id IN (${teamIds.map(() => '?').join(',')}) AND fts.team_id IS NOT NULL AND bf.folder_id IS NOT NULL)` : ''}
       )
     `;
     const sharedBookmarksParams: any[] = [userId, userId, userId];
@@ -104,7 +104,7 @@ router.get('/stats', requireAuth, async (req, res) => {
       LEFT JOIN folder_team_shares fts ON f.id = fts.folder_id
       WHERE f.user_id != ? AND (
         fus.user_id = ?
-        OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL)
+        ${teamIds.length > 0 ? `OR (fts.team_id IN (${teamIds.map(() => '?').join(',')}) AND fts.team_id IS NOT NULL)` : ''}
       )
     `;
     const sharedFoldersParams: any[] = [userId, userId];
