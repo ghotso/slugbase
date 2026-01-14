@@ -6,6 +6,61 @@ import Button from '../ui/Button';
 import api from '../../api/client';
 import { useToast } from '../ui/Toast';
 
+/**
+ * Sanitize text content to prevent XSS
+ * Removes HTML tags and escapes special characters
+ */
+function sanitizeTextContent(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+  // Remove any HTML tags that might have been interpreted
+  // textContent already does this, but we add extra safety
+  return text
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim();
+}
+
+/**
+ * Validate and sanitize URL from HTML attribute
+ */
+function validateAndSanitizeUrl(href: string | null): string | null {
+  if (!href || typeof href !== 'string') {
+    return null;
+  }
+  
+  const trimmed = href.trim();
+  if (!trimmed) {
+    return null;
+  }
+  
+  // Block dangerous protocols
+  const lowerHref = trimmed.toLowerCase();
+  if (lowerHref.startsWith('javascript:') || 
+      lowerHref.startsWith('data:') || 
+      lowerHref.startsWith('vbscript:') ||
+      lowerHref.startsWith('file:') ||
+      lowerHref.startsWith('about:')) {
+    return null;
+  }
+  
+  // Validate as proper URL
+  try {
+    const url = new URL(trimmed, window.location.origin);
+    // Only allow http and https
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null;
+    }
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,44 +90,42 @@ export default function ImportModal({ isOpen, onClose, onSuccess }: ImportModalP
         bookmarks = Array.isArray(data) ? data : [data];
       } else if (file.name.endsWith('.html')) {
         // HTML/Netscape bookmark format
+        // Limit file size to prevent DoS attacks
+        if (text.length > 10 * 1024 * 1024) { // 10MB limit
+          throw new Error('HTML file is too large. Maximum size is 10MB.');
+        }
+        
         // Use DOMParser in a safe way - only extract text content and validate URLs
+        // Note: We parse HTML but immediately extract only safe textContent and validate URLs
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, 'text/html');
+        
+        // Check for parsing errors (malformed HTML)
+        const parserError = doc.querySelector('parsererror');
+        if (parserError) {
+          throw new Error('Invalid HTML format. Please ensure the file is a valid HTML bookmark file.');
+        }
+        
         const links = doc.querySelectorAll('a');
         bookmarks = Array.from(links)
           .map((link) => {
-            // Extract text content (safe - already text, not HTML)
-            const title = (link.textContent || '').trim();
-            // Extract href and validate
-            const href = link.getAttribute('href') || '';
+            // Extract text content and sanitize to prevent XSS
+            // textContent is safe (doesn't interpret HTML), but we sanitize for extra safety
+            const rawTitle = link.textContent || '';
+            const title = sanitizeTextContent(rawTitle);
             
-            // Validate URL to prevent XSS via javascript: or data: protocols
-            if (href) {
-              const lowerHref = href.toLowerCase().trim();
-              // Block dangerous protocols
-              if (lowerHref.startsWith('javascript:') || 
-                  lowerHref.startsWith('data:') || 
-                  lowerHref.startsWith('vbscript:') ||
-                  lowerHref.startsWith('file:')) {
-                return null; // Skip invalid URLs
-              }
-              
-              // Try to validate as proper URL
-              try {
-                const url = new URL(href, window.location.origin);
-                // Only allow http and https
-                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-                  return null;
-                }
-              } catch {
-                // If URL parsing fails, skip this bookmark
-                return null;
-              }
+            // Extract and validate URL
+            const href = link.getAttribute('href');
+            const validatedUrl = validateAndSanitizeUrl(href);
+            
+            // Skip if no valid URL or title
+            if (!validatedUrl || !title) {
+              return null;
             }
             
             return {
-              title: title || '',
-              url: href || '',
+              title,
+              url: validatedUrl,
             };
           })
           .filter((bookmark): bookmark is { title: string; url: string } => bookmark !== null);
