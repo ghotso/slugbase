@@ -545,14 +545,14 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: slugValidation.error });
       }
       
-      // Check if slug is unique for user
+      // Check if slug is globally unique (required for shared bookmark forwarding)
       const existing = await queryOne(
-        'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ?',
-        [userId, slug]
+        'SELECT id FROM bookmarks WHERE slug = ?',
+        [slug]
       );
 
       if (existing) {
-        return res.status(400).json({ error: 'Slug already exists for this user' });
+        return res.status(400).json({ error: 'Slug already exists. Slugs must be unique across all bookmarks.' });
       }
     }
 
@@ -755,11 +755,11 @@ router.put('/:id', async (req, res) => {
         }
         
         const slugExists = await queryOne(
-          'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ? AND id != ?',
-          [userId, newSlug, id]
+          'SELECT id FROM bookmarks WHERE slug = ? AND id != ?',
+          [newSlug, id]
         );
         if (slugExists) {
-          return res.status(400).json({ error: 'Slug already exists for this user' });
+          return res.status(400).json({ error: 'Slug already exists. Slugs must be unique across all bookmarks.' });
         }
       }
     }
@@ -1210,13 +1210,13 @@ router.post('/import', async (req, res) => {
             // Skip slug if invalid, but continue with import
             slug = null;
           } else {
-            // Check uniqueness
+            // Check global uniqueness (required for shared bookmark forwarding)
             const existing = await queryOne(
-              'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ?',
-              [userId, slug]
+              'SELECT id FROM bookmarks WHERE slug = ?',
+              [slug]
             );
             if (existing) {
-              // Skip slug if not unique
+              // Skip slug if not unique globally
               slug = null;
             }
           }

@@ -82,7 +82,7 @@ export default function AdminOIDCProviders() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {t('admin.oidcProviders')}
           </h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -95,7 +95,7 @@ export default function AdminOIDCProviders() {
       </div>
 
       {providers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <Key className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
           <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">{t('auth.noProviders')}</p>
           <Button onClick={() => setModalOpen(true)} variant="primary" size="sm" icon={Plus}>
@@ -107,9 +107,9 @@ export default function AdminOIDCProviders() {
           {providers.map((provider) => (
             <div
               key={provider.id}
-              className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all overflow-hidden"
+              className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all overflow-hidden"
             >
-              <div className="p-5 space-y-4">
+              <div className="p-4 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <Key className="h-5 w-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />

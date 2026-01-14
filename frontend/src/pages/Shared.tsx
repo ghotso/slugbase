@@ -95,7 +95,7 @@ export default function Shared() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-3">
           <Share2 className="h-8 w-8" />
           {t('shared.title')}
         </h1>
@@ -143,7 +143,7 @@ export default function Shared() {
       {/* Content */}
       {activeTab === 'bookmarks' ? (
         bookmarks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <Share2 className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
             <p className="text-gray-500 dark:text-gray-400 text-lg">{t('shared.noBookmarks')}</p>
           </div>
@@ -152,16 +152,16 @@ export default function Shared() {
             {bookmarks.map((bookmark) => (
               <div
                 key={bookmark.id}
-                className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col"
+                className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col"
               >
-                <div className="p-5 space-y-3 flex-1 flex flex-col">
+                <div className="p-4 space-y-3 flex-1 flex flex-col">
                   {/* Header with icon */}
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50 overflow-hidden">
                       <Favicon url={bookmark.url} size={24} />
                     </div>
                     <div className="flex-1 min-w-0 pt-0.5">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1.5">
+                      <h3 className="text-[15px] font-medium text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1.5">
                         {bookmark.title}
                       </h3>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50">
@@ -247,7 +247,7 @@ export default function Shared() {
         )
       ) : (
         folders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <Share2 className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
             <p className="text-gray-500 dark:text-gray-400 text-lg">{t('shared.noFolders')}</p>
           </div>
@@ -259,14 +259,14 @@ export default function Shared() {
                 onClick={() => handleFolderClick(folder.id)}
                 className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col cursor-pointer"
               >
-                <div className="p-5 space-y-3 flex-1 flex flex-col">
+                <div className="p-4 space-y-3 flex-1 flex flex-col">
                   {/* Header with icon */}
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50">
                       <FolderIcon iconName={folder.icon} size={24} className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0 pt-0.5">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1.5">
+                      <h3 className="text-[15px] font-medium text-gray-900 dark:text-white truncate mb-1.5">
                         {folder.name}
                       </h3>
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md border border-green-200 dark:border-green-800/50">

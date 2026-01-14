@@ -356,7 +356,7 @@ export default function Bookmarks() {
       <div className="sticky top-0 z-40 bg-gray-50 dark:bg-gray-900 -mx-4 px-4 pt-4 pb-4 border-b border-gray-200 dark:border-gray-700 -mb-4 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
               {t('bookmarks.title')}
             </h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
@@ -390,7 +390,7 @@ export default function Bookmarks() {
       </div>
 
       {/* Sticky Toolbar: Filters, Sort, View Modes */}
-      <div className="sticky top-[140px] z-30 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+      <div className="sticky top-[140px] z-30 flex flex-wrap items-center gap-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
         {/* Filters */}
         <div className="flex flex-wrap gap-3 flex-1 min-w-[200px]">
           <div className="flex-1 min-w-[180px]">
@@ -568,7 +568,7 @@ export default function Bookmarks() {
 
       {/* Bookmarks Display */}
       {sortedBookmarks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col items-center justify-center py-20 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4">
             <BookmarkIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>

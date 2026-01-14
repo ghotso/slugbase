@@ -135,7 +135,7 @@ export default function OIDCProviderModal({
             <input
               type="text"
               required
-              className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               value={formData.provider_key}
               onChange={(e) => setFormData({ ...formData, provider_key: e.target.value })}
             />
@@ -148,7 +148,7 @@ export default function OIDCProviderModal({
             <input
               type="url"
               required
-              className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               value={formData.issuer_url}
               onChange={(e) => setFormData({ ...formData, issuer_url: e.target.value })}
             />
@@ -163,7 +163,7 @@ export default function OIDCProviderModal({
             <input
               type="text"
               required
-              className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               value={formData.client_id}
               onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
             />
@@ -177,7 +177,7 @@ export default function OIDCProviderModal({
             <input
               type="password"
               required={!provider}
-              className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               value={formData.client_secret}
               onChange={(e) => setFormData({ ...formData, client_secret: e.target.value })}
             />
@@ -190,7 +190,7 @@ export default function OIDCProviderModal({
           </label>
           <input
             type="text"
-            className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             value={formData.scopes}
             onChange={(e) => setFormData({ ...formData, scopes: e.target.value })}
           />
@@ -212,7 +212,7 @@ export default function OIDCProviderModal({
               </label>
               <input
                 type="url"
-                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder={`${formData.issuer_url || 'https://issuer.com'}/authorize`}
                 value={formData.authorization_url}
                 onChange={(e) => setFormData({ ...formData, authorization_url: e.target.value })}
@@ -225,7 +225,7 @@ export default function OIDCProviderModal({
               </label>
               <input
                 type="url"
-                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder={`${formData.issuer_url || 'https://issuer.com'}/token`}
                 value={formData.token_url}
                 onChange={(e) => setFormData({ ...formData, token_url: e.target.value })}
@@ -238,7 +238,7 @@ export default function OIDCProviderModal({
               </label>
               <input
                 type="url"
-                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder={`${formData.issuer_url || 'https://issuer.com'}/userinfo`}
                 value={formData.userinfo_url}
                 onChange={(e) => setFormData({ ...formData, userinfo_url: e.target.value })}

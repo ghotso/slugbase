@@ -103,7 +103,7 @@ export default function BookmarkTableView({
   }
 
   return (
-    <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+    <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
       <table className="w-full">
         <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
           <tr>
@@ -194,7 +194,7 @@ export default function BookmarkTableView({
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50 overflow-hidden">
                       <Favicon url={bookmark.url} size={16} />
                     </div>
-                    <div className="font-bold text-gray-900 dark:text-white text-sm" style={{ fontWeight: 700 }}>
+                    <div className="font-medium text-gray-900 dark:text-white text-[15px]">
                       {bookmark.title}
                     </div>
                   </div>

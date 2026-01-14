@@ -90,7 +90,7 @@ export default function AdminUsers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('admin.users')}</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.users')}</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {users.length} {users.length === 1 ? t('common.user') : t('common.users')}
           </p>
@@ -100,7 +100,7 @@ export default function AdminUsers() {
         </Button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {users.map((user) => (
             <div key={user.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">

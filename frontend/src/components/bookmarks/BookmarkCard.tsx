@@ -48,11 +48,11 @@ export default function BookmarkCard({
 
   return (
     <div
-      className={`group bg-white dark:bg-gray-800 rounded-xl border ${
+      className={`group bg-white dark:bg-gray-800 rounded-lg border ${
         selected
           ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
           : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-      } hover:shadow-lg transition-all duration-200 flex flex-col ${compact ? 'p-3' : 'p-5'}`}
+      } hover:shadow-lg transition-all duration-200 flex flex-col ${compact ? 'p-2.5' : 'p-4'}`}
     >
       <div className={`space-y-3 flex-1 flex flex-col ${compact ? 'space-y-2' : ''}`}>
         {/* Header with icon and title */}

@@ -87,7 +87,7 @@ export default function Profile() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
           {t('profile.title')}
         </h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -95,8 +95,8 @@ export default function Profile() {
         </p>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="p-6 space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="p-4 space-y-6">
           {/* Email */}
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
@@ -117,7 +117,7 @@ export default function Profile() {
                       setFormData({ ...formData, email: e.target.value });
                       setErrors({ ...errors, email: undefined });
                     }}
-                    className="w-full px-4 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={t('profile.emailPlaceholder')}
                   />
                   {errors.email && (
@@ -183,7 +183,7 @@ export default function Profile() {
                       setFormData({ ...formData, name: e.target.value });
                       setErrors({ ...errors, name: undefined });
                     }}
-                    className="w-full px-4 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={t('profile.namePlaceholder')}
                   />
                   {errors.name && (

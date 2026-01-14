@@ -64,7 +64,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
           {t('app.name')}
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400">
@@ -75,19 +75,19 @@ export default function Dashboard() {
       {/* Statistics Overview */}
       {stats && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {t('dashboard.overview')}
           </h2>
           
           {/* Stats Grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {t('dashboard.totalBookmarks')}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-2">
                     {stats.totalBookmarks}
                   </p>
                 </div>
@@ -97,13 +97,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {t('dashboard.totalFolders')}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-2">
                     {stats.totalFolders}
                   </p>
                 </div>
@@ -113,13 +113,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {t('dashboard.totalTags')}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-2">
                     {stats.totalTags}
                   </p>
                 </div>
@@ -129,13 +129,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {t('dashboard.sharedBookmarks')}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-2">
                     {stats.sharedBookmarks}
                   </p>
                 </div>
@@ -145,13 +145,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {t('dashboard.sharedFolders')}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-white mt-2">
                     {stats.sharedFolders}
                   </p>
                 </div>
@@ -165,10 +165,10 @@ export default function Dashboard() {
           {/* Recent Bookmarks and Top Tags */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Recent Bookmarks */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-[15px] font-medium text-gray-900 dark:text-white">
                   {t('dashboard.recentBookmarks')}
                 </h3>
               </div>
@@ -199,10 +199,10 @@ export default function Dashboard() {
             </div>
 
             {/* Top Tags */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center gap-2 mb-4">
                 <TrendingUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-[15px] font-medium text-gray-900 dark:text-white">
                   {t('dashboard.topTags')}
                 </h3>
               </div>
@@ -241,14 +241,14 @@ export default function Dashboard() {
             <Link
               key={card.to}
               to={card.to}
-              className="group relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all overflow-hidden"
+              className="group relative bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all overflow-hidden"
             >
-              <div className="p-6 space-y-4">
+              <div className="p-4 space-y-4">
                 <div className={`inline-flex p-3 rounded-lg border ${colorClasses[card.color as keyof typeof colorClasses]}`}>
                   <Icon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  <h3 className="text-[15px] font-medium text-gray-900 dark:text-white mb-1">
                     {card.title}
                   </h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">

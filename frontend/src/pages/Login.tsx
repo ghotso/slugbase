@@ -73,7 +73,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
             {t('auth.login')}
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -81,7 +81,7 @@ export default function Login() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-8 space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg p-4 space-y-6">
           {/* Local Authentication Form */}
           <form onSubmit={handleLocalLogin} className="space-y-5">
             <div>
@@ -93,7 +93,7 @@ export default function Login() {
                 name="email"
                 type="email"
                 required
-                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder={t('auth.emailPlaceholder')}
                 value={localAuth.email}
                 onChange={(e) => setLocalAuth({ ...localAuth, email: e.target.value })}
@@ -108,7 +108,7 @@ export default function Login() {
                 name="password"
                 type="password"
                 required
-                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder={t('auth.passwordPlaceholder')}
                 value={localAuth.password}
                 onChange={(e) => setLocalAuth({ ...localAuth, password: e.target.value })}

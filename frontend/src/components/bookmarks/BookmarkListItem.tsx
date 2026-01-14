@@ -51,7 +51,7 @@ export default function BookmarkListItem({
         selected
           ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
           : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-      } hover:shadow transition-all duration-200 ${compact ? 'p-3' : 'p-4'}`}
+      } hover:shadow transition-all duration-200 ${compact ? 'p-2.5' : 'p-4'}`}
     >
       <div className="flex items-center gap-4">
         {bulkMode && (
@@ -68,7 +68,7 @@ export default function BookmarkListItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h3 className={`${compact ? 'text-sm' : 'text-base'} font-bold text-gray-900 dark:text-white mb-1`} style={{ fontWeight: 700 }}>
+              <h3 className={`${compact ? 'text-sm' : 'text-[15px]'} font-medium text-gray-900 dark:text-white mb-1`}>
                 {bookmark.title}
               </h3>
               <p className={`${compact ? 'text-xs' : 'text-sm'} text-gray-700 dark:text-gray-200 truncate mb-2`}>
