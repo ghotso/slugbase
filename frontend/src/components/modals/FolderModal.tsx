@@ -128,13 +128,14 @@ export default function FolderModal({
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={folder ? t('folders.edit') : t('folders.create')}
-      size="md"
-    >
-      <form onSubmit={handleSubmit} className="space-y-5">
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={folder ? t('folders.edit') : t('folders.create')}
+        size="md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
             {t('folders.name')}
@@ -324,6 +325,7 @@ export default function FolderModal({
           </Button>
         </div>
       </form>
+      </Modal>
 
       {sharingModalOpen && (
         <SharingModal
@@ -347,6 +349,6 @@ export default function FolderModal({
           type="folder"
         />
       )}
-    </Modal>
+    </>
   );
 }
