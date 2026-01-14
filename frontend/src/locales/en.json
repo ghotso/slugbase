@@ -169,7 +169,10 @@
   "profile": {
     "title": "Profile",
     "description": "Manage your account settings and preferences",
+    "accountInformation": "Account Information",
+    "preferences": "Preferences",
     "userKey": "User Key",
+    "userKeyDescription": "Your unique identifier for bookmark forwarding. Share this with others to allow them to access your shared bookmarks.",
     "email": "Email",
     "emailPlaceholder": "your@email.com",
     "name": "Name",

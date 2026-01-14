@@ -95,219 +95,237 @@ export default function Profile() {
         </p>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="p-4 space-y-6">
-          {/* Email */}
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                {t('profile.email')}
-              </label>
-              {editingEmail ? (
-                <div className="space-y-1">
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      setErrors({ ...errors, email: undefined });
-                    }}
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder={t('profile.emailPlaceholder')}
-                  />
-                  {errors.email && (
-                    <p className="text-xs text-red-600 dark:text-red-400">{errors.email}</p>
-                  )}
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={handleSubmit}
-                      disabled={saving}
-                    >
-                      {saving ? t('common.loading') : t('common.save')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setEditingEmail(false);
-                        setFormData({ ...formData, email: user?.email || '' });
-                        setErrors({ ...errors, email: undefined });
-                      }}
-                    >
-                      {t('common.cancel')}
-                    </Button>
+      <div className="space-y-6">
+        {/* Account Information Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="p-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t('profile.accountInformation')}
+            </h2>
+            <div className="space-y-6">
+              {/* Email */}
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.email}</p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingEmail(true)}
-                  >
-                    {t('common.edit')}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Name */}
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <UserIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                {t('profile.name')}
-              </label>
-              {editingName ? (
-                <div className="space-y-1">
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => {
-                      setFormData({ ...formData, name: e.target.value });
-                      setErrors({ ...errors, name: undefined });
-                    }}
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder={t('profile.namePlaceholder')}
-                  />
-                  {errors.name && (
-                    <p className="text-xs text-red-600 dark:text-red-400">{errors.name}</p>
-                  )}
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={handleSubmit}
-                      disabled={saving}
-                    >
-                      {saving ? t('common.loading') : t('common.save')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setEditingName(false);
-                        setFormData({ ...formData, name: user?.name || '' });
-                        setErrors({ ...errors, name: undefined });
-                      }}
-                    >
-                      {t('common.cancel')}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.name}</p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingName(true)}
-                  >
-                    {t('common.edit')}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* User Key */}
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <Key className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                {t('profile.userKey')}
-              </label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-mono text-gray-900 dark:text-white">
-                  {user.user_key}
-                </code>
-                <button
-                  onClick={handleCopyUserKey}
-                  className="flex-shrink-0 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                  title={t('bookmarks.copyUrl')}
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                    {t('profile.email')}
+                  </label>
+                  {editingEmail ? (
+                    <div className="space-y-1">
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => {
+                          setFormData({ ...formData, email: e.target.value });
+                          setErrors({ ...errors, email: undefined });
+                        }}
+                        className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder={t('profile.emailPlaceholder')}
+                      />
+                      {errors.email && (
+                        <p className="text-xs text-red-600 dark:text-red-400">{errors.email}</p>
+                      )}
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={handleSubmit}
+                          disabled={saving}
+                        >
+                          {saving ? t('common.loading') : t('common.save')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingEmail(false);
+                            setFormData({ ...formData, email: user?.email || '' });
+                            setErrors({ ...errors, email: undefined });
+                          }}
+                        >
+                          {t('common.cancel')}
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
-                    <Copy className="h-4 w-4" />
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.email}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingEmail(true)}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                    </div>
                   )}
-                </button>
+                </div>
               </div>
-              {copied && (
-                <p className="mt-2 text-xs text-green-600 dark:text-green-400">
-                  {t('bookmarks.copied')}
-                </p>
-              )}
+
+              {/* Name */}
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <UserIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                    {t('profile.name')}
+                  </label>
+                  {editingName ? (
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          setErrors({ ...errors, name: undefined });
+                        }}
+                        className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder={t('profile.namePlaceholder')}
+                      />
+                      {errors.name && (
+                        <p className="text-xs text-red-600 dark:text-red-400">{errors.name}</p>
+                      )}
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={handleSubmit}
+                          disabled={saving}
+                        >
+                          {saving ? t('common.loading') : t('common.save')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingName(false);
+                            setFormData({ ...formData, name: user?.name || '' });
+                            setErrors({ ...errors, name: undefined });
+                          }}
+                        >
+                          {t('common.cancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 flex-1">{user.name}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingName(true)}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* User Key */}
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <Key className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('profile.userKey')}
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    {t('profile.userKeyDescription')}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-4 h-9 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-mono text-gray-900 dark:text-white flex items-center">
+                      {user.user_key}
+                    </code>
+                    <button
+                      onClick={handleCopyUserKey}
+                      className="flex-shrink-0 p-2 h-9 w-9 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center justify-center"
+                      title={t('bookmarks.copyUrl')}
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {copied && (
+                    <p className="mt-2 text-xs text-green-600 dark:text-green-400">
+                      {t('bookmarks.copied')}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Settings Form */}
-          <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-                  <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+        {/* Preferences Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="p-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t('profile.preferences')}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('profile.language')}
+                  </label>
+                  <Select
+                    value={formData.language}
+                    onChange={(value) => setFormData({ ...formData, language: value })}
+                    options={languageOptions}
+                  />
                 </div>
               </div>
-              <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('profile.language')}
-                </label>
-                <Select
-                  value={formData.language}
-                  onChange={(value) => setFormData({ ...formData, language: value })}
-                  options={languageOptions}
-                />
-              </div>
-            </div>
 
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-                  <Palette className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <div className="h-10 w-10 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                    <Palette className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('profile.theme')}
+                  </label>
+                  <Select
+                    value={formData.theme}
+                    onChange={(value) => setFormData({ ...formData, theme: value })}
+                    options={themeOptions}
+                  />
                 </div>
               </div>
-              <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                  {t('profile.theme')}
-                </label>
-                <Select
-                  value={formData.theme}
-                  onChange={(value) => setFormData({ ...formData, theme: value })}
-                  options={themeOptions}
-                />
-              </div>
-            </div>
 
-            <div className="pt-4">
-              <Button type="submit" variant="primary" disabled={saving}>
-                {saving ? t('common.loading') : t('profile.save')}
-              </Button>
-            </div>
-          </form>
+              <div className="pt-2">
+                <Button type="submit" variant="primary" disabled={saving}>
+                  {saving ? t('common.loading') : t('profile.save')}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

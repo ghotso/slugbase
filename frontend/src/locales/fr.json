@@ -80,15 +80,24 @@
   },
   "profile": {
     "title": "Profil",
+    "description": "Gérez les paramètres et préférences de votre compte",
+    "accountInformation": "Informations du compte",
+    "preferences": "Préférences",
     "userKey": "Clé utilisateur",
+    "userKeyDescription": "Votre identifiant unique pour la redirection de signets. Partagez-le avec d'autres pour leur permettre d'accéder à vos signets partagés.",
     "email": "E-mail",
+    "emailPlaceholder": "votre@email.com",
     "name": "Nom",
+    "namePlaceholder": "Votre nom",
     "language": "Langue",
     "theme": "Thème",
     "themeAuto": "Automatique",
     "themeLight": "Clair",
     "themeDark": "Sombre",
-    "save": "Enregistrer les paramètres"
+    "save": "Enregistrer les paramètres",
+    "languageEnglish": "Anglais",
+    "languageGerman": "Allemand",
+    "languageFrench": "Français"
   },
   "admin": {
     "customEndpoints": "Points de terminaison OIDC personnalisés",
