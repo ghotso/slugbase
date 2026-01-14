@@ -64,7 +64,17 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
+        <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-gray-900 dark:text-white mb-3">
+          <img
+            src="/slugbase_icon_blue.svg"
+            alt=""
+            className="h-12 w-12 dark:hidden"
+          />
+          <img
+            src="/slugbase_icon_white.svg"
+            alt=""
+            className="h-12 w-12 hidden dark:block"
+          />
           {t('app.name')}
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400">

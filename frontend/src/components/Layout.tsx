@@ -44,8 +44,18 @@ export default function Layout() {
             <div className="flex items-center gap-8">
               <Link
                 to="/"
-                className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
+                <img
+                  src="/slugbase_icon_blue.svg"
+                  alt=""
+                  className="h-12 w-12 dark:hidden"
+                />
+                <img
+                  src="/slugbase_icon_white.svg"
+                  alt=""
+                  className="h-12 w-12 hidden dark:block"
+                />
                 {t('app.name')}
               </Link>
               <div className="hidden md:flex items-center gap-1">
