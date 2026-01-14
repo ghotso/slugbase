@@ -39,7 +39,7 @@ const router = Router();
  *       401:
  *         description: Unauthorized
  */
-router.get('/stats', requireAuth, async (req, res) => {
+router.get('/stats', requireAuth(), async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
