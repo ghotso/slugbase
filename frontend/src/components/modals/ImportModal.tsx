@@ -7,28 +7,47 @@ import api from '../../api/client';
 import { useToast } from '../ui/Toast';
 
 /**
- * Sanitize text content to prevent XSS
- * Removes HTML tags and escapes special characters
+ * Decode HTML entities safely (only common ones, no script execution)
  */
-function sanitizeTextContent(text: string): string {
-  if (!text || typeof text !== 'string') {
-    return '';
-  }
-  // Remove any HTML tags that might have been interpreted
-  // textContent already does this, but we add extra safety
-  return text
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    .trim();
+function decodeHtmlEntities(text: string): string {
+  const entityMap: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#x27;': "'",
+    '&#x2F;': '/',
+  };
+  
+  return text.replace(/&[#\w]+;/g, (entity) => {
+    return entityMap[entity] || entity;
+  });
 }
 
 /**
- * Validate and sanitize URL from HTML attribute
+ * Extract text content from HTML tag safely (without parsing HTML)
+ * Removes HTML tags and decodes entities
  */
-function validateAndSanitizeUrl(href: string | null): string | null {
+function extractTextFromHtmlTag(html: string): string {
+  if (!html || typeof html !== 'string') {
+    return '';
+  }
+  // Remove HTML tags using regex (safe for extraction, not for rendering)
+  // This is safe because we're only extracting text, not rendering HTML
+  let text = html.replace(/<[^>]*>/g, '');
+  // Remove any remaining angle brackets to avoid partial tags like "<script"
+  text = text.replace(/[<>]/g, '');
+  // Decode HTML entities
+  text = decodeHtmlEntities(text);
+  // Trim and return
+  return text.trim();
+}
+
+/**
+ * Validate and sanitize URL
+ */
+function validateAndSanitizeUrl(href: string): string | null {
   if (!href || typeof href !== 'string') {
     return null;
   }
@@ -59,6 +78,44 @@ function validateAndSanitizeUrl(href: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Parse HTML bookmark file using regex (avoids DOMParser XSS concerns)
+ * This is safe because we only extract text and URLs, never render HTML
+ */
+function parseHtmlBookmarks(html: string): Array<{ title: string; url: string }> {
+  const bookmarks: Array<{ title: string; url: string }> = [];
+  
+  // Match <a> tags with href attribute
+  // This regex matches: <a ... href="..." ...>...</a>
+  // We use non-greedy matching and capture href and content
+  const linkRegex = /<a\s+[^>]*href\s*=\s*["']([^"']+)["'][^>]*>(.*?)<\/a>/gi;
+  
+  let match;
+  while ((match = linkRegex.exec(html)) !== null) {
+    const href = match[1];
+    const tagContent = match[2];
+    
+    // Extract and validate URL
+    const validatedUrl = validateAndSanitizeUrl(href);
+    if (!validatedUrl) {
+      continue; // Skip invalid URLs
+    }
+    
+    // Extract text content (remove any nested HTML tags)
+    const title = extractTextFromHtmlTag(tagContent);
+    if (!title) {
+      continue; // Skip bookmarks without titles
+    }
+    
+    bookmarks.push({
+      title,
+      url: validatedUrl,
+    });
+  }
+  
+  return bookmarks;
 }
 
 interface ImportModalProps {
@@ -95,40 +152,9 @@ export default function ImportModal({ isOpen, onClose, onSuccess }: ImportModalP
           throw new Error('HTML file is too large. Maximum size is 10MB.');
         }
         
-        // Use DOMParser in a safe way - only extract text content and validate URLs
-        // Note: We parse HTML but immediately extract only safe textContent and validate URLs
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
-        
-        // Check for parsing errors (malformed HTML)
-        const parserError = doc.querySelector('parsererror');
-        if (parserError) {
-          throw new Error('Invalid HTML format. Please ensure the file is a valid HTML bookmark file.');
-        }
-        
-        const links = doc.querySelectorAll('a');
-        bookmarks = Array.from(links)
-          .map((link) => {
-            // Extract text content and sanitize to prevent XSS
-            // textContent is safe (doesn't interpret HTML), but we sanitize for extra safety
-            const rawTitle = link.textContent || '';
-            const title = sanitizeTextContent(rawTitle);
-            
-            // Extract and validate URL
-            const href = link.getAttribute('href');
-            const validatedUrl = validateAndSanitizeUrl(href);
-            
-            // Skip if no valid URL or title
-            if (!validatedUrl || !title) {
-              return null;
-            }
-            
-            return {
-              title,
-              url: validatedUrl,
-            };
-          })
-          .filter((bookmark): bookmark is { title: string; url: string } => bookmark !== null);
+        // Parse HTML bookmarks using regex (avoids DOMParser XSS concerns)
+        // This approach extracts text and URLs without parsing HTML into DOM
+        bookmarks = parseHtmlBookmarks(text);
       } else {
         throw new Error('Unsupported file format. Please use JSON or HTML.');
       }
