@@ -15,6 +15,9 @@
 import { execute, query } from '../index.js';
 import * as migration001 from './001_migrate_slug_nullable.js';
 import * as migration002 from './002_add_oidc_custom_endpoints.js';
+import * as migration003 from './003_add_bookmark_features.js';
+import * as migration004 from './004_make_slug_globally_unique.js';
+import * as migration005 from './005_add_email_verification.js';
 
 export interface Migration {
   migrationId: string;
@@ -36,6 +39,24 @@ const migrations: Migration[] = [
     migrationName: migration002.migrationName,
     up: migration002.up,
     down: migration002.down,
+  },
+  {
+    migrationId: migration003.migrationId,
+    migrationName: migration003.migrationName,
+    up: migration003.up,
+    down: migration003.down,
+  },
+  {
+    migrationId: migration004.migrationId,
+    migrationName: migration004.migrationName,
+    up: migration004.up,
+    down: migration004.down,
+  },
+  {
+    migrationId: migration005.migrationId,
+    migrationName: migration005.migrationName,
+    up: migration005.up,
+    down: migration005.down,
   },
 ];
 

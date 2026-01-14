@@ -280,6 +280,93 @@ export async function sendPasswordResetEmail(email: string, resetToken: string, 
 }
 
 /**
+ * Send email verification email
+ */
+export async function sendEmailVerificationEmail(email: string, verificationToken: string, verificationUrl: string, newEmail: string): Promise<boolean> {
+  const safeHrefUrl = safeUrlForHref(verificationUrl);
+  const escapedDisplayUrl = escapeHtml(verificationUrl);
+  const escapedNewEmail = escapeHtml(newEmail);
+  
+  const subject = 'Verify Your New Email Address - SlugBase';
+  const html = `
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Verify Your New Email Address</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">SlugBase</h1>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #1a1a1a; font-size: 24px; font-weight: 600; line-height: 1.3;">Verify Your New Email Address</h2>
+              <p style="margin: 0 0 20px; color: #4a4a4a; font-size: 16px; line-height: 1.6;">You requested to change your email address to <strong style="color: #1a1a1a;">${escapedNewEmail}</strong>. Click the button below to verify and complete the change:</p>
+              
+              <!-- Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 30px 0;">
+                <tr>
+                  <td align="center" style="padding: 0;">
+                    <a href="${safeHrefUrl}" style="display: inline-block; padding: 14px 32px; background-color: #3b82f6; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; text-align: center; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);">Verify Email Address</a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">Or copy and paste this link into your browser:</p>
+              <p style="margin: 0 0 30px; padding: 12px; background-color: #f9fafb; border-radius: 4px; word-break: break-all; color: #4a4a4a; font-size: 13px; font-family: 'Courier New', monospace; line-height: 1.5;">${escapedDisplayUrl}</p>
+              
+              <!-- Warning -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                <tr>
+                  <td style="padding: 16px;">
+                    <p style="margin: 0; color: #1e40af; font-size: 14px; line-height: 1.6; font-weight: 500;">ℹ️ This link will expire in 24 hours for security reasons.</p>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">If you did not request this email change, please ignore this email. Your email address will remain unchanged.</p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
+              <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.6; text-align: center;">This is an automated message from SlugBase. Please do not reply to this email.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const result = await sendEmail(email, subject, html);
+  return result.success;
+}
+
+/**
  * Test SMTP configuration
  */
 export async function testSMTPConfig(testEmail: string): Promise<{ success: boolean; error?: string }> {

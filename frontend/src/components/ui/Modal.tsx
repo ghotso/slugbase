@@ -14,7 +14,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
 
   const sizeClasses = {
     sm: 'max-w-md',
-    md: 'max-w-lg',
+    md: 'max-w-[460px]',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
   };
@@ -30,7 +30,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
 
         {/* Modal */}
         <div
-          className={`relative w-full ${sizeClasses[size]} transform overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-2xl transition-all`}
+          className={`relative w-full ${sizeClasses[size]} transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow-2xl transition-all`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

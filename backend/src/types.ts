@@ -47,6 +47,9 @@ export interface Bookmark {
   url: string;
   slug: string;
   forwarding_enabled: boolean;
+  pinned?: boolean;
+  access_count?: number;
+  last_accessed_at?: string | null;
   folder_id?: string;
   folder?: Folder;
   tags?: Tag[];
@@ -71,6 +74,7 @@ export interface UpdateBookmarkInput {
   url?: string;
   slug?: string;
   forwarding_enabled?: boolean;
+  pinned?: boolean;
   folder_ids?: string[];
   tag_ids?: string[];
   team_ids?: string[];

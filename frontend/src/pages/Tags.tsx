@@ -46,9 +46,11 @@ export default function Tags() {
   }
 
   function handleDelete(id: string) {
+    const tag = tags.find(t => t.id === id);
+    const tagName = tag?.name || 'this tag';
     showConfirm(
       t('tags.deleteTag'),
-      t('tags.deleteConfirm'),
+      t('tags.deleteConfirmWithName', { name: tagName }),
       async () => {
         try {
           await api.delete(`/tags/${id}`);
@@ -79,7 +81,7 @@ export default function Tags() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
             {t('tags.title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -93,7 +95,7 @@ export default function Tags() {
 
       {/* Tags Grid */}
       {tags.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <TagIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
           <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">{t('tags.empty')}</p>
           <Button onClick={handleCreate} variant="primary" size="sm" icon={Plus}>
@@ -105,16 +107,16 @@ export default function Tags() {
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg transition-all duration-200 flex flex-col"
+              className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 hover:shadow-lg transition-all duration-200 flex flex-col"
             >
-              <div className="p-5 space-y-3 flex-1 flex flex-col">
+              <div className="p-4 space-y-3 flex-1 flex flex-col">
                 {/* Header with icon */}
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 flex items-center justify-center border border-purple-100 dark:border-purple-800/50">
                     <TagIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div className="flex-1 min-w-0 pt-0.5">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    <h3 className="text-[15px] font-medium text-gray-900 dark:text-white truncate">
                       {tag.name}
                     </h3>
                   </div>

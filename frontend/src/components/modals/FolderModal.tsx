@@ -128,13 +128,14 @@ export default function FolderModal({
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={folder ? t('folders.edit') : t('folders.create')}
-      size="md"
-    >
-      <form onSubmit={handleSubmit} className="space-y-5">
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={folder ? t('folders.edit') : t('folders.create')}
+        size="md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
             {t('folders.name')}
@@ -142,7 +143,7 @@ export default function FolderModal({
           <input
             type="text"
             required
-            className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
@@ -324,6 +325,7 @@ export default function FolderModal({
           </Button>
         </div>
       </form>
+      </Modal>
 
       {sharingModalOpen && (
         <SharingModal
@@ -347,6 +349,6 @@ export default function FolderModal({
           type="folder"
         />
       )}
-    </Modal>
+    </>
   );
 }

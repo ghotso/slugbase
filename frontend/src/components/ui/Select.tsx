@@ -75,7 +75,7 @@ export default function Select({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute z-20 mt-1 w-full rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-50 mt-1 w-full rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg max-h-60 overflow-auto">
             {options.length === 0 ? (
               <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
                 No options

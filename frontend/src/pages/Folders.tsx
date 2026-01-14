@@ -59,9 +59,11 @@ export default function Folders() {
   }
 
   function handleDelete(id: string) {
+    const folder = folders.find(f => f.id === id);
+    const folderName = folder?.name || 'this folder';
     showConfirm(
       t('folders.deleteFolder'),
-      t('folders.deleteConfirm'),
+      t('folders.deleteConfirmWithName', { name: folderName }),
       async () => {
         try {
           await api.delete(`/folders/${id}`);
@@ -92,7 +94,7 @@ export default function Folders() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
             {t('folders.title')}
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -106,7 +108,7 @@ export default function Folders() {
 
       {/* Folders Grid */}
       {folders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <FolderIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
           <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">{t('folders.empty')}</p>
           <Button onClick={handleCreate} variant="primary" size="sm" icon={Plus}>
@@ -118,16 +120,16 @@ export default function Folders() {
           {folders.map((folder) => (
             <div
               key={folder.id}
-              className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col"
+              className="group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg transition-all duration-200 flex flex-col"
             >
-              <div className="p-5 space-y-3 flex-1 flex flex-col">
+              <div className="p-4 space-y-3 flex-1 flex flex-col">
                 {/* Header with icon */}
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 flex items-center justify-center border border-blue-100 dark:border-blue-800/50">
                     <FolderIcon iconName={folder.icon} size={24} className="text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0 pt-0.5">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate mb-1.5">
+                    <h3 className="text-[15px] font-medium text-gray-900 dark:text-white truncate mb-1.5">
                       {folder.name}
                     </h3>
                     {folder.shared_teams && folder.shared_teams.length > 0 && (

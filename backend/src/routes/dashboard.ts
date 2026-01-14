@@ -39,7 +39,7 @@ const router = Router();
  *       401:
  *         description: Unauthorized
  */
-router.get('/stats', requireAuth, async (req, res) => {
+router.get('/stats', requireAuth(), async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
@@ -56,63 +56,128 @@ router.get('/stats', requireAuth, async (req, res) => {
       'SELECT COUNT(*) as count FROM bookmarks WHERE user_id = ?',
       [userId]
     );
-    const totalBookmarks = (totalBookmarksResult as any)?.count || 0;
+    const totalBookmarks = totalBookmarksResult ? parseInt((totalBookmarksResult as any).count) : 0;
 
     // Total folders (own only)
     const totalFoldersResult = await queryOne(
       'SELECT COUNT(*) as count FROM folders WHERE user_id = ?',
       [userId]
     );
-    const totalFolders = (totalFoldersResult as any)?.count || 0;
+    const totalFolders = totalFoldersResult ? parseInt((totalFoldersResult as any).count) : 0;
 
     // Total tags (own only)
     const totalTagsResult = await queryOne(
       'SELECT COUNT(*) as count FROM tags WHERE user_id = ?',
       [userId]
     );
-    const totalTags = (totalTagsResult as any)?.count || 0;
+    const totalTags = totalTagsResult ? parseInt((totalTagsResult as any).count) : 0;
 
     // Shared bookmarks count (bookmarks shared with user)
-    let sharedBookmarksQuery = `
-      SELECT COUNT(DISTINCT b.id) as count
-      FROM bookmarks b
-      LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
-      LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
-      LEFT JOIN bookmark_folders bf ON b.id = bf.bookmark_id
-      LEFT JOIN folder_user_shares fus ON bf.folder_id = fus.folder_id
-      LEFT JOIN folder_team_shares fts ON bf.folder_id = fts.folder_id
-      WHERE b.user_id != ? AND (
-        bus.user_id = ?
-        OR (bts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND bts.team_id IS NOT NULL)
-        OR fus.user_id = ?
-        OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL AND bf.folder_id IS NOT NULL)
-      )
-    `;
-    const sharedBookmarksParams: any[] = [userId, userId, userId];
+    // Use simpler queries that don't cause cartesian products
+    const sharedBookmarkIds = new Set<string>();
+    
+    // Direct user shares
+    const userSharedBookmarks = await query(
+      'SELECT DISTINCT bookmark_id FROM bookmark_user_shares WHERE user_id = ?',
+      [userId]
+    );
+    (Array.isArray(userSharedBookmarks) ? userSharedBookmarks : []).forEach((row: any) => {
+      if (row.bookmark_id) sharedBookmarkIds.add(row.bookmark_id);
+    });
+    
+    // Team shares
     if (teamIds.length > 0) {
-      sharedBookmarksParams.push(...teamIds);
-      sharedBookmarksParams.push(...teamIds);
+      const teamSharedBookmarks = await query(
+        `SELECT DISTINCT bookmark_id FROM bookmark_team_shares WHERE team_id IN (${teamIds.map(() => '?').join(',')})`,
+        teamIds
+      );
+      (Array.isArray(teamSharedBookmarks) ? teamSharedBookmarks : []).forEach((row: any) => {
+        if (row.bookmark_id) sharedBookmarkIds.add(row.bookmark_id);
+      });
     }
-    const sharedBookmarksResult = await queryOne(sharedBookmarksQuery, sharedBookmarksParams);
-    const sharedBookmarks = (sharedBookmarksResult as any)?.count || 0;
+    
+    // Folder user shares
+    const folderUserShares = await query(
+      'SELECT DISTINCT folder_id FROM folder_user_shares WHERE user_id = ?',
+      [userId]
+    );
+    if (Array.isArray(folderUserShares) && folderUserShares.length > 0) {
+      const folderIds = folderUserShares.map((row: any) => row.folder_id).filter(Boolean);
+      if (folderIds.length > 0) {
+        const bookmarkFolderShares = await query(
+          `SELECT DISTINCT bookmark_id FROM bookmark_folders WHERE folder_id IN (${folderIds.map(() => '?').join(',')})`,
+          folderIds
+        );
+        (Array.isArray(bookmarkFolderShares) ? bookmarkFolderShares : []).forEach((row: any) => {
+          if (row.bookmark_id) sharedBookmarkIds.add(row.bookmark_id);
+        });
+      }
+    }
+    
+    // Folder team shares
+    if (teamIds.length > 0) {
+      const folderTeamShares = await query(
+        `SELECT DISTINCT folder_id FROM folder_team_shares WHERE team_id IN (${teamIds.map(() => '?').join(',')})`,
+        teamIds
+      );
+      if (Array.isArray(folderTeamShares) && folderTeamShares.length > 0) {
+        const folderIds = folderTeamShares.map((row: any) => row.folder_id).filter(Boolean);
+        if (folderIds.length > 0) {
+          const bookmarkFolderShares = await query(
+            `SELECT DISTINCT bookmark_id FROM bookmark_folders WHERE folder_id IN (${folderIds.map(() => '?').join(',')})`,
+            folderIds
+          );
+          (Array.isArray(bookmarkFolderShares) ? bookmarkFolderShares : []).forEach((row: any) => {
+            if (row.bookmark_id) sharedBookmarkIds.add(row.bookmark_id);
+          });
+        }
+      }
+    }
+    
+    // Filter out own bookmarks and count
+    const sharedBookmarkIdsArray = Array.from(sharedBookmarkIds);
+    let sharedBookmarks = 0;
+    if (sharedBookmarkIdsArray.length > 0) {
+      const sharedBookmarksResult = await queryOne(
+        `SELECT COUNT(*) as count FROM bookmarks WHERE id IN (${sharedBookmarkIdsArray.map(() => '?').join(',')}) AND user_id != ?`,
+        [...sharedBookmarkIdsArray, userId]
+      );
+      sharedBookmarks = sharedBookmarksResult ? parseInt((sharedBookmarksResult as any).count) : 0;
+    }
 
     // Shared folders count (folders shared with user)
-    let sharedFoldersQuery = `
-      SELECT COUNT(DISTINCT f.id) as count
-      FROM folders f
-      LEFT JOIN folder_user_shares fus ON f.id = fus.folder_id
-      LEFT JOIN folder_team_shares fts ON f.id = fts.folder_id
-      WHERE f.user_id != ? AND (
-        fus.user_id = ?
-        OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL)
-      )
-    `;
-    const sharedFoldersParams: any[] = [userId, userId];
+    const sharedFolderIds = new Set<string>();
+    
+    // Direct user shares
+    const userSharedFolders = await query(
+      'SELECT DISTINCT folder_id FROM folder_user_shares WHERE user_id = ?',
+      [userId]
+    );
+    (Array.isArray(userSharedFolders) ? userSharedFolders : []).forEach((row: any) => {
+      if (row.folder_id) sharedFolderIds.add(row.folder_id);
+    });
+    
+    // Team shares
     if (teamIds.length > 0) {
-      sharedFoldersParams.push(...teamIds);
+      const teamSharedFolders = await query(
+        `SELECT DISTINCT folder_id FROM folder_team_shares WHERE team_id IN (${teamIds.map(() => '?').join(',')})`,
+        teamIds
+      );
+      (Array.isArray(teamSharedFolders) ? teamSharedFolders : []).forEach((row: any) => {
+        if (row.folder_id) sharedFolderIds.add(row.folder_id);
+      });
     }
-    const sharedFoldersResult = await queryOne(sharedFoldersQuery, sharedFoldersParams);
-    const sharedFolders = (sharedFoldersResult as any)?.count || 0;
+    
+    // Filter out own folders and count
+    const sharedFolderIdsArray = Array.from(sharedFolderIds);
+    let sharedFolders = 0;
+    if (sharedFolderIdsArray.length > 0) {
+      const sharedFoldersResult = await queryOne(
+        `SELECT COUNT(*) as count FROM folders WHERE id IN (${sharedFolderIdsArray.map(() => '?').join(',')}) AND user_id != ?`,
+        [...sharedFolderIdsArray, userId]
+      );
+      sharedFolders = sharedFoldersResult ? parseInt((sharedFoldersResult as any).count) : 0;
+    }
 
     // Recent bookmarks (last 5, own only)
     const recentBookmarks = await query(

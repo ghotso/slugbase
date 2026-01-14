@@ -10,6 +10,9 @@ interface User {
   is_admin: boolean;
   language: string;
   theme: string;
+  email_pending?: string | null;
+  oidc_provider?: string | null;
+  oidc_sub?: string | null;
 }
 
 interface AuthContextType {
@@ -18,6 +21,7 @@ interface AuthContextType {
   login: (provider: string) => void;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
+  checkAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,16 +80,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function updateUser(updates: Partial<User>) {
+  async function updateUser(updates: Partial<User>): Promise<any> {
     try {
       const response = await api.put('/users/me', updates);
-      setUser(response.data);
+      // Only update user if email wasn't changed (email verification required)
+      if (!response.data.emailVerificationRequired) {
+        setUser(response.data);
+      } else {
+        // Refresh user to get email_pending
+        await checkAuth();
+      }
       if (updates.language) {
         i18n.changeLanguage(updates.language);
       }
       if (updates.theme) {
         applyTheme(updates.theme);
       }
+      return response.data;
     } catch (error) {
       console.error('Update user error:', error);
       throw error;
@@ -105,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

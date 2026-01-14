@@ -6,7 +6,8 @@ import Modal from '../ui/Modal';
 import Autocomplete from '../ui/Autocomplete';
 import Button from '../ui/Button';
 import SharingModal from './SharingModal';
-import { Share2 } from 'lucide-react';
+import { Share2, Copy, Check } from 'lucide-react';
+import { useToast } from '../ui/Toast';
 
 interface Bookmark {
   id: string;
@@ -40,6 +41,7 @@ export default function BookmarkModal({
 }: BookmarkModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     title: '',
     url: '',
@@ -54,6 +56,7 @@ export default function BookmarkModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sharingModalOpen, setSharingModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (bookmark) {
@@ -139,10 +142,14 @@ export default function BookmarkModal({
   }
 
   const selectedTags = tags.filter((tag) => formData.tag_ids.includes(tag.id));
-  // Note: selectedTeams is used in the team selection UI below
+  const selectedFolders = folders.filter((folder) => formData.folder_ids.includes(folder.id));
 
   const handleTagChange = (newTags: Array<{ id: string; name: string }>) => {
     setFormData({ ...formData, tag_ids: newTags.map((t) => t.id) });
+  };
+
+  const handleFolderChange = (newFolders: Array<{ id: string; name: string }>) => {
+    setFormData({ ...formData, folder_ids: newFolders.map((f) => f.id) });
   };
 
   const handleCreateTag = async (name: string): Promise<{ id: string; name: string } | null> => {
@@ -161,184 +168,170 @@ export default function BookmarkModal({
 
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={bookmark ? t('bookmarks.edit') : t('bookmarks.create')}
-      size="lg"
-    >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {t('bookmarks.name')}
-          </label>
-          <input
-            type="text"
-            required
-            className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {t('bookmarks.url')}
-          </label>
-          <input
-            type="url"
-            required
-            className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            value={formData.url}
-            onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-          />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="forwarding"
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
-            checked={formData.forwarding_enabled}
-            onChange={(e) => setFormData({ ...formData, forwarding_enabled: e.target.checked })}
-          />
-          <label htmlFor="forwarding" className="text-sm font-medium text-gray-900 dark:text-white">
-            {t('bookmarks.forwardingEnabled')}
-          </label>
-        </div>
-
-        {formData.forwarding_enabled && (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={bookmark ? t('bookmarks.edit') : t('bookmarks.create')}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-              {t('bookmarks.slug')} <span className="text-red-500">*</span>
+              {t('bookmarks.name')}
             </label>
             <input
               type="text"
               required
-              className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              value={formData.slug || ''}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             />
           </div>
-        )}
 
-        {!formData.forwarding_enabled && (
           <div>
             <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-              {t('bookmarks.slug')} <span className="text-gray-500 text-xs">({t('bookmarks.optional')})</span>
+              {t('bookmarks.url')}
             </label>
             <input
-              type="text"
-              className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              value={formData.slug || ''}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              type="url"
+              required
+              className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {t('bookmarks.slugOptionalHint')}
-            </p>
           </div>
-        )}
 
-        {formData.forwarding_enabled && (
-          <div className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-xs font-mono text-blue-800 dark:text-blue-200">
-              {window.location.origin}/{user?.user_key}/{formData.slug}
-            </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="forwarding"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+              checked={formData.forwarding_enabled}
+              onChange={(e) => setFormData({ ...formData, forwarding_enabled: e.target.checked })}
+            />
+            <label htmlFor="forwarding" className="text-sm font-medium text-gray-900 dark:text-white">
+              {t('bookmarks.forwardingEnabled')}
+            </label>
           </div>
-        )}
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {t('bookmarks.folders')}
-          </label>
-          {folders.length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2">
-                {folders.map((folder) => (
-                  <button
-                    key={folder.id}
-                    type="button"
-                    onClick={() => {
-                      setFormData({
-                        ...formData,
-                        folder_ids: formData.folder_ids.includes(folder.id)
-                          ? formData.folder_ids.filter((id) => id !== folder.id)
-                          : [...formData.folder_ids, folder.id],
-                      });
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      formData.folder_ids.includes(folder.id)
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {folder.name}
-                  </button>
-                ))}
+          {formData.forwarding_enabled && (
+            <div className="animate-in slide-in-from-top-2 duration-200">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  {t('bookmarks.slug')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={formData.slug || ''}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                />
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                {t('bookmarks.foldersDescription')}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('bookmarks.noFoldersAvailable')}
-            </p>
+              {formData.slug && (
+                <div className="mt-3 animate-in slide-in-from-top-2 duration-200">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('bookmarks.forwardingPreview')}
+                  </label>
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <code className="flex-1 text-xs font-mono text-blue-800 dark:text-blue-200 truncate">
+                      {window.location.origin}/{user?.user_key}/{formData.slug}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/${user?.user_key}/${formData.slug}`;
+                        navigator.clipboard.writeText(url);
+                        setCopied(true);
+                        showToast(t('common.copied'), 'success');
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="flex-shrink-0 p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                      title={t('bookmarks.copyUrl')}
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    {t('bookmarks.forwardingPreviewDescription')}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
-        </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {t('bookmarks.tags')}
-          </label>
-          <Autocomplete
-            value={selectedTags}
-            onChange={handleTagChange}
-            options={tags}
-            placeholder={t('bookmarks.tags')}
-            onCreateNew={handleCreateTag}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            <Share2 className="inline h-4 w-4 mr-1.5" />
-            {t('bookmarks.shareWithTeams')}
-          </label>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setSharingModalOpen(true)}
-            className="w-full"
-          >
-            {formData.share_all_teams
-              ? t('bookmarks.shareAllTeams')
-              : formData.team_ids.length > 0 || formData.user_ids.length > 0
-              ? t('bookmarks.sharingSummary', { 
-                  teamCount: formData.team_ids.length, 
-                  teams: formData.team_ids.length === 1 ? t('common.team') : t('common.teams'),
-                  userCount: formData.user_ids.length,
-                  users: formData.user_ids.length === 1 ? t('common.user') : t('common.users')
-                })
-              : t('bookmarks.shareWithTeams')}
-          </Button>
-        </div>
-
-        {error && (
-          <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              {t('bookmarks.folders')}
+            </label>
+            {folders.length > 0 ? (
+              <Autocomplete
+                value={selectedFolders}
+                onChange={handleFolderChange}
+                options={folders}
+                placeholder={t('bookmarks.foldersDescription')}
+              />
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('bookmarks.noFoldersAvailable')}
+              </p>
+            )}
           </div>
-        )}
 
-        <div className="flex gap-3 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" variant="primary" disabled={loading} className="flex-1">
-            {loading ? t('common.loading') : t('common.save')}
-          </Button>
-        </div>
-      </form>
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              {t('bookmarks.tags')}
+            </label>
+            <Autocomplete
+              value={selectedTags}
+              onChange={handleTagChange}
+              options={tags}
+              placeholder={t('bookmarks.tags')}
+              onCreateNew={handleCreateTag}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <Share2 className="inline h-4 w-4 mr-1.5" />
+              {t('bookmarks.shareWithTeams')}
+            </label>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setSharingModalOpen(true)}
+              className="w-full"
+            >
+              {formData.share_all_teams
+                ? t('bookmarks.shareAllTeams')
+                : formData.team_ids.length > 0 || formData.user_ids.length > 0
+                ? t('bookmarks.sharingSummary', { 
+                    teamCount: formData.team_ids.length, 
+                    teams: formData.team_ids.length === 1 ? t('common.team') : t('common.teams'),
+                    userCount: formData.user_ids.length,
+                    users: formData.user_ids.length === 1 ? t('common.user') : t('common.users')
+                  })
+                : t('bookmarks.shareWithTeams')}
+            </Button>
+          </div>
+
+          {error && (
+            <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" variant="primary" disabled={loading} className="flex-1">
+              {loading ? t('common.loading') : t('common.save')}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {sharingModalOpen && (
         <SharingModal
@@ -362,6 +355,6 @@ export default function BookmarkModal({
           type="bookmark"
         />
       )}
-    </Modal>
+    </>
   );
 }

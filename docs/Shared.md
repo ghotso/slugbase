@@ -183,9 +183,9 @@ When no shared content exists:
 
 ## Related Pages
 
-- [Bookmarks](./Bookmarks.md) - View own bookmarks
-- [Folders](./Folders.md) - View own folders
-- [Profile](./Profile.md) - User profile and settings
+- [Bookmarks](bookmarks) - View own bookmarks
+- [Folders](folders) - View own folders
+- [Profile](profile) - User profile and settings
 
 ## Technical Details
 

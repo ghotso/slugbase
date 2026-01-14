@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE(user_id, slug)
+  UNIQUE(slug)
 );
 
 -- Bookmark folders junction table (many-to-many)

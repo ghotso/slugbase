@@ -2,6 +2,9 @@ import { Router } from 'express';
 import { queryOne, execute } from '../db/index.js';
 import { AuthRequest, requireAuth } from '../middleware/auth.js';
 import { validateEmail, normalizeEmail, validateLength, sanitizeString } from '../utils/validation.js';
+import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
+import { sendEmailVerificationEmail } from '../utils/email.js';
 
 const router = Router();
 router.use(requireAuth());
@@ -48,7 +51,7 @@ router.get('/me', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
-    const user = await queryOne('SELECT id, email, name, user_key, is_admin, language, theme FROM users WHERE id = ?', [userId]);
+    const user = await queryOne('SELECT id, email, name, user_key, is_admin, language, theme, email_pending, oidc_provider, oidc_sub FROM users WHERE id = ?', [userId]);
     res.json(user);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -116,20 +119,66 @@ router.put('/me', async (req, res) => {
 
     // Validate and update email if provided
     if (email !== undefined) {
+      // Check if user is connected to OIDC provider - email cannot be changed for OIDC users
+      if ((existing as any).oidc_provider) {
+        return res.status(400).json({ error: 'Email cannot be changed for OIDC-authenticated users. Email is managed by your identity provider.' });
+      }
+      
       const emailValidation = validateEmail(email);
       if (!emailValidation.valid) {
         return res.status(400).json({ error: emailValidation.error });
       }
       const normalizedEmail = normalizeEmail(email);
-      // Check email uniqueness if changed
+      
+      // Check if email is actually changing
       if (normalizedEmail !== (existing as any).email) {
+        // Check if new email is already in use
         const emailExists = await queryOne('SELECT id FROM users WHERE email = ? AND id != ?', [normalizedEmail, userId]);
         if (emailExists) {
           return res.status(400).json({ error: 'User with this email already exists' });
         }
+
+        // Check if there's already a pending email verification
+        const pendingEmail = (existing as any).email_pending;
+        if (pendingEmail && pendingEmail !== normalizedEmail) {
+          // Cancel previous verification tokens
+          await execute(
+            'UPDATE email_verification_tokens SET used = TRUE WHERE user_id = ? AND used = FALSE',
+            [userId]
+          );
+        }
+
+        // Generate verification token
+        const token = crypto.randomBytes(32).toString('hex');
+        const tokenId = uuidv4();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours expiration
+
+        // Store token in database
+        await execute(
+          'INSERT INTO email_verification_tokens (id, user_id, token, new_email, expires_at) VALUES (?, ?, ?, ?, ?)',
+          [tokenId, userId, token, normalizedEmail, expiresAt.toISOString()]
+        );
+
+        // Set pending email (don't update actual email yet)
+        await execute('UPDATE users SET email_pending = ? WHERE id = ?', [normalizedEmail, userId]);
+
+        // Build verification URL
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
+
+        // Send verification email to the NEW email address
+        await sendEmailVerificationEmail(normalizedEmail, token, verificationUrl, normalizedEmail);
+
+        // Return success but indicate email verification is required
+        return res.json({
+          message: 'Email change requested. Please check your new email address for a verification link.',
+          emailVerificationRequired: true,
+          currentEmail: (existing as any).email,
+          pendingEmail: normalizedEmail,
+        });
       }
-      updates.push('email = ?');
-      params.push(normalizedEmail);
+      // If email hasn't changed, no action needed
     }
 
     // Validate and update name if provided

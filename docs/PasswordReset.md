@@ -253,8 +253,8 @@ Password reset emails require SMTP configuration:
 
 ## Related Pages
 
-- [Login](./Login.md) - Entry point and post-reset destination
-- [Admin](./Admin.md) - SMTP configuration
+- [Login](login) - Entry point and post-reset destination
+- [Admin](admin) - SMTP configuration
 
 ## Technical Details
 

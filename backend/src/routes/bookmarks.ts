@@ -98,7 +98,7 @@ router.get('/', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
-    const { folder_id, tag_id } = req.query;
+    const { folder_id, tag_id, sort_by } = req.query;
 
     // Get user's teams
     const userTeams = await query(
@@ -143,7 +143,30 @@ router.get('/', async (req, res) => {
       params.push(tag_id);
     }
 
-    sql += ' ORDER BY b.created_at DESC';
+    // Add sorting
+    const sortBy = sort_by as string || 'recently_added';
+    const DB_TYPE = process.env.DB_TYPE || 'sqlite';
+    
+    switch (sortBy) {
+      case 'alphabetical':
+        sql += ' ORDER BY b.title ASC';
+        break;
+      case 'most_used':
+        sql += ' ORDER BY COALESCE(b.access_count, 0) DESC, b.created_at DESC';
+        break;
+      case 'recently_accessed':
+        // SQLite doesn't support NULLS LAST, so use CASE to put NULLs at end
+        if (DB_TYPE === 'postgresql') {
+          sql += ' ORDER BY b.last_accessed_at DESC NULLS LAST, b.created_at DESC';
+        } else {
+          sql += ' ORDER BY CASE WHEN b.last_accessed_at IS NULL THEN 1 ELSE 0 END, b.last_accessed_at DESC, b.created_at DESC';
+        }
+        break;
+      case 'recently_added':
+      default:
+        sql += ' ORDER BY b.created_at DESC';
+        break;
+    }
 
     const bookmarks = await query(sql, params);
 
@@ -151,6 +174,8 @@ router.get('/', async (req, res) => {
     for (const bookmark of bookmarks as any[]) {
       // Convert boolean fields from SQLite (0/1) to boolean
       bookmark.forwarding_enabled = Boolean(bookmark.forwarding_enabled);
+      bookmark.pinned = Boolean(bookmark.pinned || false);
+      bookmark.access_count = bookmark.access_count || 0;
       // Convert null slug or internal placeholder to empty string for frontend
       if (!bookmark.slug || bookmark.slug.startsWith('_internal_')) {
         bookmark.slug = '';
@@ -278,7 +303,165 @@ router.get('/', async (req, res) => {
  *       401:
  *         description: Unauthorized
  */
-// Get single bookmark (own or shared)
+/**
+ * @swagger
+ * /api/bookmarks/search:
+ *   get:
+ *     summary: Search bookmarks, folders, and tags
+ *     description: Global search across bookmarks, folders, and tags
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *     responses:
+ *       200:
+ *         description: Search results
+ *       401:
+ *         description: Unauthorized
+ */
+// Search endpoint (must be before /:id route)
+router.get('/search', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const userId = authReq.user!.id;
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string') {
+      return res.status(400).json({ error: 'Search query is required' });
+    }
+
+    const searchTerm = `%${q.toLowerCase()}%`;
+
+    // Search bookmarks
+    const bookmarkResults = await query(
+      `SELECT b.*, 'bookmark' as type,
+              CASE WHEN b.user_id = ? THEN 'own' ELSE 'shared' END as bookmark_type
+       FROM bookmarks b
+       LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
+       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
+       WHERE (b.user_id = ? OR bus.user_id = ? OR bts.team_id IN (
+         SELECT team_id FROM team_members WHERE user_id = ?
+       ))
+       AND (LOWER(b.title) LIKE ? OR LOWER(b.url) LIKE ? OR LOWER(COALESCE(b.slug, '')) LIKE ?)
+       LIMIT 10`,
+      [userId, userId, userId, userId, searchTerm, searchTerm, searchTerm]
+    );
+
+    // Search folders
+    const folderResults = await query(
+      `SELECT f.*, 'folder' as type
+       FROM folders f
+       WHERE f.user_id = ? AND LOWER(f.name) LIKE ?
+       LIMIT 5`,
+      [userId, searchTerm]
+    );
+
+    // Search tags
+    const tagResults = await query(
+      `SELECT t.*, 'tag' as type
+       FROM tags t
+       WHERE t.user_id = ? AND LOWER(t.name) LIKE ?
+       LIMIT 5`,
+      [userId, searchTerm]
+    );
+
+    // Process results
+    const results = [
+      ...bookmarkResults.map((b: any) => ({
+        id: b.id,
+        type: 'bookmark',
+        title: b.title,
+        url: b.url,
+        slug: b.slug || '',
+        forwarding_enabled: Boolean(b.forwarding_enabled),
+      })),
+      ...folderResults.map((f: any) => ({
+        id: f.id,
+        type: 'folder',
+        title: f.name,
+        icon: f.icon,
+      })),
+      ...tagResults.map((t: any) => ({
+        id: t.id,
+        type: 'tag',
+        title: t.name,
+      })),
+    ];
+
+    res.json(results);
+  } catch (error: any) {
+    console.error('Search error:', error);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/bookmarks/export:
+ *   get:
+ *     summary: Export bookmarks as JSON
+ *     description: Export all user's bookmarks as JSON
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: JSON export of bookmarks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *       401:
+ *         description: Unauthorized
+ */
+// Export bookmarks as JSON (must be before /:id route)
+router.get('/export', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const userId = authReq.user!.id;
+
+    // Get all bookmarks (similar to GET /)
+    const bookmarks = await query(
+      `SELECT DISTINCT b.*,
+              CASE WHEN b.user_id = ? THEN 'own' ELSE 'shared' END as bookmark_type
+       FROM bookmarks b
+       LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
+       LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
+       WHERE b.user_id = ? OR bus.user_id = ? OR bts.team_id IN (
+         SELECT team_id FROM team_members WHERE user_id = ?
+       )
+       ORDER BY b.created_at DESC`,
+      [userId, userId, userId, userId]
+    );
+
+    // Process bookmarks (simplified - no folders/tags for export)
+    const exportData = bookmarks.map((b: any) => ({
+      title: b.title,
+      url: b.url,
+      slug: b.slug || '',
+      forwarding_enabled: Boolean(b.forwarding_enabled),
+      pinned: Boolean(b.pinned || false),
+      created_at: b.created_at,
+    }));
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="slugbase-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
+    res.json(exportData);
+  } catch (error: any) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: 'Export failed' });
+  }
+});
+
+// Get single bookmark (own or shared) - must be after /export and /search routes
 router.get('/:id', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
@@ -321,6 +504,8 @@ router.get('/:id', async (req, res) => {
 
     // Convert boolean fields from SQLite (0/1) to boolean
     bookmark.forwarding_enabled = Boolean(bookmark.forwarding_enabled);
+    bookmark.pinned = Boolean(bookmark.pinned || false);
+    bookmark.access_count = bookmark.access_count || 0;
     // Convert null slug to empty string for frontend
     if (!bookmark.slug) {
       bookmark.slug = '';
@@ -518,22 +703,22 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: slugValidation.error });
       }
       
-      // Check if slug is unique for user
+      // Check if slug is globally unique (required for shared bookmark forwarding)
       const existing = await queryOne(
-        'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ?',
-        [userId, slug]
+        'SELECT id FROM bookmarks WHERE slug = ?',
+        [slug]
       );
 
       if (existing) {
-        return res.status(400).json({ error: 'Slug already exists for this user' });
+        return res.status(400).json({ error: 'Slug already exists. Slugs must be unique across all bookmarks.' });
       }
     }
 
     const bookmarkId = uuidv4();
     await execute(
-      `INSERT INTO bookmarks (id, user_id, title, url, slug, forwarding_enabled)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [bookmarkId, userId, sanitizedTitle, data.url, slug, data.forwarding_enabled || false]
+      `INSERT INTO bookmarks (id, user_id, title, url, slug, forwarding_enabled, pinned)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [bookmarkId, userId, sanitizedTitle, data.url, slug, data.forwarding_enabled || false, Boolean((data as any).pinned || false)]
     );
 
     // Add folders
@@ -728,11 +913,11 @@ router.put('/:id', async (req, res) => {
         }
         
         const slugExists = await queryOne(
-          'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ? AND id != ?',
-          [userId, newSlug, id]
+          'SELECT id FROM bookmarks WHERE slug = ? AND id != ?',
+          [newSlug, id]
         );
         if (slugExists) {
-          return res.status(400).json({ error: 'Slug already exists for this user' });
+          return res.status(400).json({ error: 'Slug already exists. Slugs must be unique across all bookmarks.' });
         }
       }
     }
@@ -776,6 +961,10 @@ router.put('/:id', async (req, res) => {
     if (data.forwarding_enabled !== undefined) {
       updates.push('forwarding_enabled = ?');
       params.push(data.forwarding_enabled);
+    }
+    if (data.pinned !== undefined) {
+      updates.push('pinned = ?');
+      params.push(data.pinned);
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');
@@ -929,6 +1118,164 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Bookmark deleted' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/bookmarks/search:
+ *   get:
+ *     summary: Search bookmarks, folders, and tags
+ *     description: Search across bookmarks, folders, and tags for the authenticated user
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Search query
+ *         example: "example"
+ *     responses:
+ *       200:
+ *         description: Search results
+ *       401:
+ *         description: Unauthorized
+ */
+/**
+ * @swagger
+ * /api/bookmarks/import:
+ *   post:
+ *     summary: Import bookmarks from JSON
+ *     description: Import bookmarks from a JSON array
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               bookmarks:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     title:
+ *                       type: string
+ *                     url:
+ *                       type: string
+ *                     slug:
+ *                       type: string
+ *                     forwarding_enabled:
+ *                       type: boolean
+ *     responses:
+ *       200:
+ *         description: Import successful
+ *       400:
+ *         description: Invalid import data
+ *       401:
+ *         description: Unauthorized
+ */
+// Import bookmarks from JSON
+router.post('/import', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const userId = authReq.user!.id;
+    const { bookmarks: importBookmarks } = req.body;
+
+    if (!Array.isArray(importBookmarks)) {
+      return res.status(400).json({ error: 'Invalid import data: expected array of bookmarks' });
+    }
+
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[],
+    };
+
+    for (const bookmarkData of importBookmarks) {
+      try {
+        if (!bookmarkData.title || !bookmarkData.url) {
+          results.failed++;
+          results.errors.push(`Missing title or URL: ${JSON.stringify(bookmarkData)}`);
+          continue;
+        }
+
+        // Validate URL
+        const urlValidation = validateUrl(bookmarkData.url);
+        if (!urlValidation.valid) {
+          results.failed++;
+          results.errors.push(`Invalid URL: ${bookmarkData.url}`);
+          continue;
+        }
+
+        // Validate and sanitize title
+        const titleValidation = validateLength(bookmarkData.title, 'Title', 1, MAX_LENGTHS.title);
+        if (!titleValidation.valid) {
+          results.failed++;
+          results.errors.push(`Invalid title: ${bookmarkData.title}`);
+          continue;
+        }
+        const sanitizedTitle = sanitizeString(bookmarkData.title);
+
+        // Handle slug
+        let slug = bookmarkData.slug && bookmarkData.slug.trim() ? bookmarkData.slug.trim() : null;
+        if (slug) {
+          const slugValidation = validateSlug(slug);
+          if (!slugValidation.valid) {
+            // Skip slug if invalid, but continue with import
+            slug = null;
+          } else {
+            // Check global uniqueness (required for shared bookmark forwarding)
+            const existing = await queryOne(
+              'SELECT id FROM bookmarks WHERE slug = ?',
+              [slug]
+            );
+            if (existing) {
+              // Skip slug if not unique globally
+              slug = null;
+            }
+          }
+        }
+
+        const bookmarkId = uuidv4();
+        await execute(
+          `INSERT INTO bookmarks (id, user_id, title, url, slug, forwarding_enabled, pinned)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            bookmarkId,
+            userId,
+            sanitizedTitle,
+            bookmarkData.url,
+            slug,
+            Boolean(bookmarkData.forwarding_enabled || false),
+            Boolean(bookmarkData.pinned || false),
+          ]
+        );
+
+        results.success++;
+      } catch (error: any) {
+        results.failed++;
+        results.errors.push(`Error importing bookmark: ${error.message}`);
+      }
+    }
+
+    res.json({
+      message: `Imported ${results.success} bookmark(s), ${results.failed} failed`,
+      success: results.success,
+      failed: results.failed,
+      errors: results.errors,
+    });
+  } catch (error: any) {
+    console.error('Import error:', error);
+    res.status(500).json({ error: 'Import failed' });
   }
 });
 

@@ -11,7 +11,13 @@ SlugBase is an open-source, self-hosted bookmark manager with optional link forw
 - 🔗 **Link Forwarding** - Optional short redirect URLs (`/{user_key}/{slug}`) for easy sharing
 - 🏷️ **Tags & Folders** - Organize bookmarks with tags and folders (many-to-many relationships)
 - 👥 **Sharing** - Share bookmarks and folders with teams and individual users
-- 🔍 **Filtering** - Filter bookmarks by folder, tag, or combinations
+- 🔍 **Filtering & Sorting** - Filter by folder/tag, sort by date, alphabetically, usage, or access time
+- 🔎 **Global Search** - Press `Ctrl+K` to search across bookmarks, folders, and tags from anywhere
+- 📊 **View Modes** - Card view or compact list view with density controls
+- 📦 **Bulk Actions** - Select multiple bookmarks for bulk operations (move, tag, share, delete)
+- 📥 **Import/Export** - Import bookmarks from JSON or export your collection
+- 📌 **Pinned Bookmarks** - Pin important bookmarks for quick access
+- 📈 **Usage Tracking** - Automatic tracking of bookmark access counts and last accessed time
 - 🌐 **Internationalization** - Full i18n support (English, German, French) with easy extension
 - 🌓 **Dark/Light Mode** - Auto-detect from browser or manual toggle with theme persistence
 

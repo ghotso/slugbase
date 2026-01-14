@@ -11,7 +11,7 @@ import passport from 'passport';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { initDatabase, isInitialized, queryOne } from './db/index.js';
+import { initDatabase, isInitialized, queryOne, query, execute } from './db/index.js';
 import { setupOIDC, loadOIDCStrategies } from './auth/oidc.js';
 import { setupJWT } from './auth/jwt.js';
 import { validateEnvironmentVariables } from './utils/env-validation.js';
@@ -31,8 +31,10 @@ import adminUserRoutes from './routes/admin/users.js';
 import adminTeamRoutes from './routes/admin/teams.js';
 import adminSettingsRoutes from './routes/admin/settings.js';
 import passwordResetRoutes from './routes/password-reset.js';
+import emailVerificationRoutes from './routes/email-verification.js';
 import csrfRoutes from './routes/csrf.js';
 import dashboardRoutes from './routes/dashboard.js';
+import { DatabaseSessionStore } from './utils/session-store.js';
 
 // Validate required environment variables before starting
 validateEnvironmentVariables();
@@ -95,11 +97,15 @@ const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
 const isHttps = baseUrl.startsWith('https://');
 const isProduction = process.env.NODE_ENV === 'production' && isHttps;
 
+// Initialize database-backed session store
+const sessionStore = new DatabaseSessionStore();
+
 app.use(session({
   secret: sessionSecret,
-  resave: true, // Set to true to ensure state is saved during OAuth redirect
+  resave: false, // Database store handles this
   saveUninitialized: true, // Set to true to save session even if not modified (needed for OAuth state)
   name: 'slugbase.sid', // Custom session name to avoid conflicts
+  store: sessionStore, // Use database-backed store instead of MemoryStore
   cookie: {
     httpOnly: true,
     secure: isProduction, // Only secure in production with HTTPS
@@ -107,8 +113,6 @@ app.use(session({
     maxAge: 10 * 60 * 1000, // 10 minutes (only needed for OAuth flow)
     path: '/', // Ensure cookie is available for all paths
   },
-  // Store session in memory (for OAuth state only, not for user sessions)
-  // In production with multiple instances, consider using Redis or database session store
 }));
 
 // General rate limiting (applied to all routes)
@@ -158,6 +162,7 @@ app.use((req: any, res: any, next: any) => {
 // All other routes
 app.use('/api/auth', authRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/folders', folderRoutes);
 app.use('/api/tags', tagRoutes);
@@ -200,18 +205,77 @@ app.get(/^\/([^\/]+)\/([^\/]+)$/, strictRateLimiter, async (req, res, next) => {
       return next();
     }
 
-    const bookmark = await queryOne(
+    // First, try to find a bookmark owned by this user_key
+    let bookmark = await queryOne(
       `SELECT b.* FROM bookmarks b
        INNER JOIN users u ON b.user_id = u.id
        WHERE u.user_key = ? AND b.slug = ? AND b.forwarding_enabled = TRUE`,
       [user_key, slug]
     );
 
+    // If not found, try to find a shared bookmark accessible by this user_key
+    if (!bookmark) {
+      // Get the user_id from the user_key
+      const user = await queryOne(
+        'SELECT id FROM users WHERE user_key = ?',
+        [user_key]
+      );
+
+      if (user) {
+        const userId = (user as any).id;
+
+        // Get user's teams
+        const userTeams = await query(
+          'SELECT team_id FROM team_members WHERE user_id = ?',
+          [userId]
+        );
+        const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
+
+        // Find shared bookmark with matching slug
+        let sql = `
+          SELECT DISTINCT b.*
+          FROM bookmarks b
+          LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
+          LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
+          LEFT JOIN bookmark_folders bf ON b.id = bf.bookmark_id
+          LEFT JOIN folder_user_shares fus ON bf.folder_id = fus.folder_id
+          LEFT JOIN folder_team_shares fts ON bf.folder_id = fts.folder_id
+          WHERE b.slug = ? AND b.forwarding_enabled = TRUE AND b.user_id != ?
+            AND (bus.user_id = ?
+            OR (bts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND bts.team_id IS NOT NULL)
+            OR fus.user_id = ?
+            OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL AND bf.folder_id IS NOT NULL))
+        `;
+        const params: any[] = [slug, userId, userId, userId];
+        if (teamIds.length > 0) {
+          params.push(...teamIds);
+          params.push(...teamIds); // Second set for folder shares
+        }
+
+        bookmark = await queryOne(sql, params);
+      }
+    }
+
     if (!bookmark) {
       return res.status(404).send('Not Found');
     }
 
     const redirectUrl = (bookmark as any).url;
+    const bookmarkId = (bookmark as any).id;
+
+    // Track access (increment access_count and update last_accessed_at)
+    // Do this asynchronously so it doesn't block the redirect
+    execute(
+      `UPDATE bookmarks 
+       SET access_count = COALESCE(access_count, 0) + 1,
+           last_accessed_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [bookmarkId]
+    ).catch((err) => {
+      // Log error but don't fail the redirect
+      console.error('Failed to track bookmark access:', err);
+    });
+
     const urlValidation = validateUrl(redirectUrl);
     if (!urlValidation.valid) {
       console.error('Invalid redirect URL detected:', redirectUrl);

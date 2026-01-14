@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Bookmark, Folder, Tag, LogOut, Settings, Share2, Github } from 'lucide-react';
 import Button from './ui/Button';
+import GlobalSearch from './GlobalSearch';
 import api from '../api/client';
 
 export default function Layout() {
@@ -43,8 +44,18 @@ export default function Layout() {
             <div className="flex items-center gap-8">
               <Link
                 to="/"
-                className="text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
+                <img
+                  src="/slugbase_icon_blue.svg"
+                  alt=""
+                  className="h-12 w-12 dark:hidden"
+                />
+                <img
+                  src="/slugbase_icon_white.svg"
+                  alt=""
+                  className="h-12 w-12 hidden dark:block"
+                />
                 {t('app.name')}
               </Link>
               <div className="hidden md:flex items-center gap-1">
@@ -57,8 +68,8 @@ export default function Layout() {
                       to={item.path}
                       className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
+                          ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -69,8 +80,9 @@ export default function Layout() {
               </div>
             </div>
 
-            {/* User Menu */}
+            {/* Search & User Menu */}
             <div className="flex items-center gap-4">
+              <GlobalSearch />
               <Link
                 to="/profile"
                 className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"

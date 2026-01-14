@@ -156,7 +156,7 @@ export default function AdminSettings() {
   return (
     <div className="space-y-6">
       {/* SMTP Settings Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
         <div className="flex items-center gap-2 mb-6">
           <Mail className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           <div>
@@ -190,7 +190,7 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={t('smtp.hostPlaceholder')}
                     value={smtpSettings.host}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, host: e.target.value })}
@@ -202,7 +202,7 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="number"
-                    className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={t('smtp.portPlaceholder')}
                     value={smtpSettings.port}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, port: parseInt(e.target.value) || 587 })}
@@ -214,7 +214,7 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={t('smtp.userPlaceholder')}
                     value={smtpSettings.user}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, user: e.target.value })}
@@ -226,7 +226,7 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="password"
-                    className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={passwordIsSet ? t('smtp.passwordPlaceholder') : t('smtp.passwordPlaceholder')}
                     value={smtpSettings.password}
                     onChange={(e) => {
@@ -261,7 +261,7 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="email"
-                    className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={t('smtp.fromPlaceholder')}
                     value={smtpSettings.from}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, from: e.target.value })}
@@ -273,7 +273,7 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     placeholder={t('smtp.fromNamePlaceholder')}
                     value={smtpSettings.fromName}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, fromName: e.target.value })}
@@ -325,7 +325,7 @@ export default function AdminSettings() {
 
       {/* General Settings Section */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('admin.settings')}</h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.settings')}</h2>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {Object.keys(generalSettings).length} {Object.keys(generalSettings).length === 1 ? t('common.setting') : t('common.settings')}
         </p>
@@ -333,7 +333,7 @@ export default function AdminSettings() {
 
       {/* Existing Settings */}
       {Object.keys(generalSettings).length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {Object.entries(generalSettings).map(([key, value]) => (
               <div key={key} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -344,7 +344,7 @@ export default function AdminSettings() {
                     </label>
                     <input
                       type="text"
-                      className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       value={value}
                       onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
                     />
@@ -371,7 +371,7 @@ export default function AdminSettings() {
       )}
 
       {/* Add New Setting */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4">
         <div className="flex items-center gap-2 mb-4">
           <SettingsIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
