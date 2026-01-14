@@ -34,8 +34,13 @@ function extractTextFromHtmlTag(html: string): string {
     return '';
   }
   // Remove HTML tags using regex (safe for extraction, not for rendering)
-  // This is safe because we're only extracting text, not rendering HTML
-  let text = html.replace(/<[^>]*>/g, '');
+  // Apply repeatedly to avoid incomplete multi-character sanitization
+  let text = html;
+  let previous = '';
+  while (text !== previous) {
+    previous = text;
+    text = text.replace(/<[^>]*>/g, '');
+  }
   // Remove any remaining angle brackets to avoid partial tags like "<script"
   text = text.replace(/[<>]/g, '');
   // Decode HTML entities
