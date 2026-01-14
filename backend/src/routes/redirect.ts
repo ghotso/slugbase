@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { queryOne } from '../db/index.js';
+import { queryOne, execute } from '../db/index.js';
 import { strictRateLimiter } from '../middleware/security.js';
 import { validateUrl } from '../utils/validation.js';
 
@@ -73,6 +73,20 @@ router.get('/:user_key/:slug', strictRateLimiter, async (req, res, next) => {
     }
 
     const redirectUrl = (bookmark as any).url;
+    const bookmarkId = (bookmark as any).id;
+
+    // Track access (increment access_count and update last_accessed_at)
+    // Do this asynchronously so it doesn't block the redirect
+    execute(
+      `UPDATE bookmarks 
+       SET access_count = COALESCE(access_count, 0) + 1,
+           last_accessed_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [bookmarkId]
+    ).catch((err) => {
+      // Log error but don't fail the redirect
+      console.error('Failed to track bookmark access:', err);
+    });
 
     // Validate redirect URL to prevent open redirect vulnerabilities
     const urlValidation = validateUrl(redirectUrl);

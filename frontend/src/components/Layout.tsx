@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { Bookmark, Folder, Tag, LogOut, Settings, Share2, Github } from 'lucide-react';
 import Button from './ui/Button';
+import GlobalSearch from './GlobalSearch';
 import api from '../api/client';
 
 export default function Layout() {
@@ -69,8 +70,9 @@ export default function Layout() {
               </div>
             </div>
 
-            {/* User Menu */}
+            {/* Search & User Menu */}
             <div className="flex items-center gap-4">
+              <GlobalSearch />
               <Link
                 to="/profile"
                 className="hidden sm:block text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"

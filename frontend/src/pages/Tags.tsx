@@ -46,9 +46,11 @@ export default function Tags() {
   }
 
   function handleDelete(id: string) {
+    const tag = tags.find(t => t.id === id);
+    const tagName = tag?.name || 'this tag';
     showConfirm(
       t('tags.deleteTag'),
-      t('tags.deleteConfirm'),
+      t('tags.deleteConfirmWithName', { name: tagName }),
       async () => {
         try {
           await api.delete(`/tags/${id}`);

@@ -6,7 +6,8 @@ import Modal from '../ui/Modal';
 import Autocomplete from '../ui/Autocomplete';
 import Button from '../ui/Button';
 import SharingModal from './SharingModal';
-import { Share2 } from 'lucide-react';
+import { Share2, Copy, Check } from 'lucide-react';
+import { useToast } from '../ui/Toast';
 
 interface Bookmark {
   id: string;
@@ -40,6 +41,7 @@ export default function BookmarkModal({
 }: BookmarkModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     title: '',
     url: '',
@@ -54,6 +56,7 @@ export default function BookmarkModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sharingModalOpen, setSharingModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (bookmark) {
@@ -139,10 +142,14 @@ export default function BookmarkModal({
   }
 
   const selectedTags = tags.filter((tag) => formData.tag_ids.includes(tag.id));
-  // Note: selectedTeams is used in the team selection UI below
+  const selectedFolders = folders.filter((folder) => formData.folder_ids.includes(folder.id));
 
   const handleTagChange = (newTags: Array<{ id: string; name: string }>) => {
     setFormData({ ...formData, tag_ids: newTags.map((t) => t.id) });
+  };
+
+  const handleFolderChange = (newFolders: Array<{ id: string; name: string }>) => {
+    setFormData({ ...formData, folder_ids: newFolders.map((f) => f.id) });
   };
 
   const handleCreateTag = async (name: string): Promise<{ id: string; name: string } | null> => {
@@ -209,43 +216,49 @@ export default function BookmarkModal({
           </div>
 
           {formData.forwarding_enabled && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                {t('bookmarks.slug')} <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                value={formData.slug || ''}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              />
-            </div>
-          )}
-
-          {!formData.forwarding_enabled && (
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                {t('bookmarks.slug')} <span className="text-gray-500 text-xs">({t('bookmarks.optional')})</span>
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                value={formData.slug || ''}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {t('bookmarks.slugOptionalHint')}
-              </p>
-            </div>
-          )}
-
-          {formData.forwarding_enabled && (
-            <div className="px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-xs font-mono text-blue-800 dark:text-blue-200">
-                {window.location.origin}/{user?.user_key}/{formData.slug}
-              </p>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  {t('bookmarks.slug')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-4 py-2.5 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  value={formData.slug || ''}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                />
+              </div>
+              {formData.slug && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    {t('bookmarks.forwardingPreview')}
+                  </label>
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <code className="flex-1 text-xs font-mono text-blue-800 dark:text-blue-200 truncate">
+                      {window.location.origin}/{user?.user_key}/{formData.slug}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/${user?.user_key}/${formData.slug}`;
+                        navigator.clipboard.writeText(url);
+                        setCopied(true);
+                        showToast(t('common.copied'), 'success');
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                      className="flex-shrink-0 p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                      title={t('bookmarks.copyUrl')}
+                    >
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    {t('bookmarks.forwardingPreviewDescription')}
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
           <div>
@@ -253,34 +266,12 @@ export default function BookmarkModal({
               {t('bookmarks.folders')}
             </label>
             {folders.length > 0 ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {folders.map((folder) => (
-                    <button
-                      key={folder.id}
-                      type="button"
-                      onClick={() => {
-                        setFormData({
-                          ...formData,
-                          folder_ids: formData.folder_ids.includes(folder.id)
-                            ? formData.folder_ids.filter((id) => id !== folder.id)
-                            : [...formData.folder_ids, folder.id],
-                        });
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        formData.folder_ids.includes(folder.id)
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {folder.name}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  {t('bookmarks.foldersDescription')}
-                </p>
-              </>
+              <Autocomplete
+                value={selectedFolders}
+                onChange={handleFolderChange}
+                options={folders}
+                placeholder={t('bookmarks.foldersDescription')}
+              />
             ) : (
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t('bookmarks.noFoldersAvailable')}

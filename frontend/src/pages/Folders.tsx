@@ -59,9 +59,11 @@ export default function Folders() {
   }
 
   function handleDelete(id: string) {
+    const folder = folders.find(f => f.id === id);
+    const folderName = folder?.name || 'this folder';
     showConfirm(
       t('folders.deleteFolder'),
-      t('folders.deleteConfirm'),
+      t('folders.deleteConfirmWithName', { name: folderName }),
       async () => {
         try {
           await api.delete(`/folders/${id}`);
