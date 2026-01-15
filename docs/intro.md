@@ -10,6 +10,17 @@ sidebar_position: 1
 
 SlugBase is an open-source, self-hosted bookmark manager with optional link forwarding. Store and organize your bookmarks, and optionally expose them as personal short redirect URLs.
 
+## 🚀 Try the Demo
+
+Experience SlugBase live at **[https://slugbase-demo.ghotso.dev](https://slugbase-demo.ghotso.dev)**
+
+**Demo Credentials:**
+- **Admin**: `admin@demo.slugbase` / `DemoAdmin123!`
+- **Alice**: `alice@demo.slugbase` / `DemoUser123!`
+- **Bob**: `bob@demo.slugbase` / `DemoUser123!`
+
+> 💡 **Note:** The demo database resets hourly. For more details, see the [Demo Guide](demo).
+
 ## What is SlugBase?
 
 SlugBase is a powerful bookmark management system that gives you complete control over how you organize and access your links. Whether you're managing personal bookmarks or sharing resources with teams, SlugBase provides a flexible, privacy-focused solution.
@@ -53,11 +64,12 @@ Automatic theme detection from your browser preferences, with manual toggle and 
 
 ## Getting Started
 
-1. **[Setup](setup)** - Initial configuration and creating your first admin user
-2. **[Dashboard](dashboard)** - Overview of your bookmarks and quick navigation
-3. **[Bookmarks](bookmarks)** - Managing your bookmark collection
-4. **[Folders](folders) & [Tags](tags)** - Organizing your bookmarks
-5. **[Shared](shared)** - Accessing shared content
+1. **[Try the Demo](demo)** - Experience SlugBase live with pre-configured data
+2. **[Setup](setup)** - Initial configuration and creating your first admin user
+3. **[Dashboard](dashboard)** - Overview of your bookmarks and quick navigation
+4. **[Bookmarks](bookmarks)** - Managing your bookmark collection
+5. **[Folders](folders) & [Tags](tags)** - Organizing your bookmarks
+6. **[Shared](shared)** - Accessing shared content
 
 ## Documentation Sections
 

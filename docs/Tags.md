@@ -1,7 +1,7 @@
 ---
 id: tags
 title: Tags Page
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Tags Page

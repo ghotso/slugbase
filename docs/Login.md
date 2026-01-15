@@ -1,7 +1,7 @@
 ---
 id: login
 title: Login Page
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 # Login Page
