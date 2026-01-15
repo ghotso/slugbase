@@ -2,9 +2,12 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Suspense, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { Bookmark, Folder, Tag, LogOut, Settings, Share2, Github } from 'lucide-react';
+import { Bookmark, Folder, Tag, LogOut, Settings, Share2, Github, RotateCcw } from 'lucide-react';
 import Button from './ui/Button';
 import GlobalSearch from './GlobalSearch';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
+import ConfirmDialog from './ui/ConfirmDialog';
+import { useToast } from './ui/Toast';
 import api from '../api/client';
 
 export default function Layout() {
@@ -12,6 +15,36 @@ export default function Layout() {
   const { t } = useTranslation();
   const location = useLocation();
   const [version, setVersion] = useState<string | null>(null);
+  const [demoMode, setDemoMode] = useState<boolean>(false);
+  const [resetting, setResetting] = useState<boolean>(false);
+  const { showConfirm, dialogState } = useConfirmDialog();
+  const { showToast } = useToast();
+
+  const handleResetDemo = async () => {
+    try {
+      setResetting(true);
+      await api.post('/admin/demo-reset');
+      showToast(t('common.resetDemoSuccess'), 'success');
+      // Reload the page after a short delay to show fresh demo data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error: any) {
+      console.error('Failed to reset demo:', error);
+      showToast(error.response?.data?.error || t('common.resetDemoError'), 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleResetClick = () => {
+    showConfirm(
+      t('common.resetDemoConfirm'),
+      t('common.resetDemoMessage'),
+      handleResetDemo,
+      { variant: 'warning', confirmText: t('common.resetDemo') }
+    );
+  };
 
   const navItems = [
     { path: '/bookmarks', label: t('bookmarks.title'), icon: Bookmark },
@@ -22,11 +55,14 @@ export default function Layout() {
   ];
 
   useEffect(() => {
-    // Fetch version on mount
+    // Fetch version and demo mode status on mount
     api.get('/version')
       .then(res => {
         if (res.data.commit) {
           setVersion(res.data.commit.substring(0, 7)); // Show short commit hash
+        }
+        if (res.data.demoMode) {
+          setDemoMode(res.data.demoMode);
         }
       })
       .catch(() => {
@@ -36,6 +72,14 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      {/* Demo Mode Banner */}
+      {demoMode && (
+        <div className="bg-amber-500 dark:bg-amber-600 text-white px-4 py-2 text-center text-sm font-medium">
+          <span className="font-bold">{t('common.demoMode')}</span>
+          {' - '}
+          {t('common.demoModeDescription')}
+        </div>
+      )}
       {/* Navigation */}
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -126,9 +170,37 @@ export default function Layout() {
                 {version}
               </span>
             )}
+            {/* Demo Reset Button - Only visible in demo mode for admins */}
+            {demoMode && user?.is_admin && (
+              <>
+                <span className="text-gray-400 dark:text-gray-600">|</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={RotateCcw}
+                  onClick={handleResetClick}
+                  disabled={resetting}
+                  className="text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                >
+                  <span className="hidden sm:inline">{t('common.resetDemo')}</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </footer>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={dialogState.isOpen}
+        title={dialogState.title}
+        message={dialogState.message}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+        variant={dialogState.variant}
+        onConfirm={dialogState.onConfirm}
+        onCancel={dialogState.onCancel}
+      />
     </div>
   );
 }
