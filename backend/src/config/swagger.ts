@@ -5,6 +5,12 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Determine if we're running from compiled JS (production) or TS source (development)
+// When running from dist/, __dirname will be dist/config, and routes will be at ../routes/
+// In production, files are .js, in development they're .ts
+const isProduction = __dirname.includes('dist');
+const fileExtension = isProduction ? 'js' : 'ts';
+
 const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
@@ -46,8 +52,12 @@ const options: swaggerJsdoc.Options = {
     ],
   },
   apis: [
-    join(__dirname, '../routes/*.ts'),
-    join(__dirname, '../**/*.ts'),
+    // Use appropriate file extension based on environment
+    // In development: scans .ts files from src/
+    // In production: scans .js files from dist/
+    join(__dirname, `../routes/*.${fileExtension}`),
+    join(__dirname, `../routes/**/*.${fileExtension}`),
+    join(__dirname, `../**/*.${fileExtension}`),
   ],
 };
 

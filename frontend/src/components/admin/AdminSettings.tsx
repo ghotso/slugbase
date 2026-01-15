@@ -17,6 +17,7 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
+  const [demoMode, setDemoMode] = useState<boolean>(false);
 
   // SMTP settings state
   const [smtpSettings, setSmtpSettings] = useState({
@@ -34,6 +35,16 @@ export default function AdminSettings() {
 
   useEffect(() => {
     loadSettings();
+    // Check if demo mode is enabled
+    api.get('/version')
+      .then(res => {
+        if (res.data.demoMode) {
+          setDemoMode(res.data.demoMode);
+        }
+      })
+      .catch(() => {
+        // Silently fail if version endpoint is not available
+      });
   }, []);
 
   const loadSettings = async () => {
@@ -169,6 +180,14 @@ export default function AdminSettings() {
           </div>
         </div>
 
+        {demoMode && (
+          <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <strong>{t('common.demoMode')}:</strong> {t('smtp.demoModeDisabled')}
+            </p>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <input
@@ -176,7 +195,8 @@ export default function AdminSettings() {
               id="smtp-enabled"
               checked={smtpSettings.enabled}
               onChange={(e) => setSmtpSettings({ ...smtpSettings, enabled: e.target.checked })}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              disabled={demoMode}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <label htmlFor="smtp-enabled" className="text-sm font-medium text-gray-900 dark:text-white">
               {t('smtp.enabled')}
@@ -190,10 +210,11 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder={t('smtp.hostPlaceholder')}
                     value={smtpSettings.host}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, host: e.target.value })}
+                    disabled={demoMode}
                   />
                 </div>
                 <div>
@@ -202,10 +223,11 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="number"
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder={t('smtp.portPlaceholder')}
                     value={smtpSettings.port}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, port: parseInt(e.target.value) || 587 })}
+                    disabled={demoMode}
                   />
                 </div>
                 <div>
@@ -214,10 +236,11 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder={t('smtp.userPlaceholder')}
                     value={smtpSettings.user}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, user: e.target.value })}
+                    disabled={demoMode}
                   />
                 </div>
                 <div>
@@ -226,9 +249,10 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="password"
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder={passwordIsSet ? t('smtp.passwordPlaceholder') : t('smtp.passwordPlaceholder')}
                     value={smtpSettings.password}
+                    disabled={demoMode}
                     onChange={(e) => {
                       // If user starts typing, clear the masked password
                       const newValue = e.target.value;
@@ -261,10 +285,11 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="email"
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder={t('smtp.fromPlaceholder')}
                     value={smtpSettings.from}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, from: e.target.value })}
+                    disabled={demoMode}
                   />
                 </div>
                 <div>
@@ -273,10 +298,11 @@ export default function AdminSettings() {
                   </label>
                   <input
                     type="text"
-                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     placeholder={t('smtp.fromNamePlaceholder')}
                     value={smtpSettings.fromName}
                     onChange={(e) => setSmtpSettings({ ...smtpSettings, fromName: e.target.value })}
+                    disabled={demoMode}
                   />
                 </div>
               </div>
@@ -287,7 +313,8 @@ export default function AdminSettings() {
                   id="smtp-secure"
                   checked={smtpSettings.secure}
                   onChange={(e) => setSmtpSettings({ ...smtpSettings, secure: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={demoMode}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <label htmlFor="smtp-secure" className="text-sm font-medium text-gray-900 dark:text-white">
                   {t('smtp.secure')}
@@ -308,7 +335,7 @@ export default function AdminSettings() {
                     variant="ghost"
                     icon={Send}
                     onClick={handleTestEmail}
-                    disabled={testingEmail || !user?.email}
+                    disabled={testingEmail || !user?.email || demoMode}
                   >
                     {t('smtp.sendTest')}
                   </Button>
@@ -316,7 +343,7 @@ export default function AdminSettings() {
               </div>
 
               <div className="pt-4">
-                <Button variant="primary" icon={Save} onClick={handleSMTPSave}>
+                <Button variant="primary" icon={Save} onClick={handleSMTPSave} disabled={demoMode}>
                   {t('smtp.save')}
                 </Button>
               </div>

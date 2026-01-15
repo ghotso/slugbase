@@ -85,17 +85,33 @@ export default function OIDCProviderModal({
 
     try {
       const payload: any = { ...formData };
-      if (!payload.client_secret) {
-        delete payload.client_secret;
+      
+      if (provider) {
+        // When editing, don't send client_id if empty (keep existing)
+        if (!payload.client_id || payload.client_id.trim() === '') {
+          delete payload.client_id;
+        }
+        // Don't send client_secret if empty (keep existing)
+        if (!payload.client_secret || payload.client_secret.trim() === '') {
+          delete payload.client_secret;
+        }
+      } else {
+        // When creating, client_id is required
+        if (!payload.client_id || payload.client_id.trim() === '') {
+          setError(t('admin.clientIdRequired'));
+          setLoading(false);
+          return;
+        }
       }
+      
       // Remove empty endpoint URLs (use defaults)
-      if (!payload.authorization_url) {
+      if (!payload.authorization_url || payload.authorization_url.trim() === '') {
         delete payload.authorization_url;
       }
-      if (!payload.token_url) {
+      if (!payload.token_url || payload.token_url.trim() === '') {
         delete payload.token_url;
       }
-      if (!payload.userinfo_url) {
+      if (!payload.userinfo_url || payload.userinfo_url.trim() === '') {
         delete payload.userinfo_url;
       }
 
@@ -159,13 +175,15 @@ export default function OIDCProviderModal({
           <div>
             <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
               {t('admin.clientId')}
+              {provider && <span className="text-xs text-gray-500 ml-1">({t('admin.leaveBlankToKeep')})</span>}
             </label>
             <input
               type="text"
-              required
+              required={!provider}
               className="w-full px-4 h-9 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               value={formData.client_id}
               onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+              placeholder={provider ? t('admin.leaveBlankToKeep') : ''}
             />
           </div>
 

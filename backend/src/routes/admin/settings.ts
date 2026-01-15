@@ -255,6 +255,14 @@ router.delete('/:key', async (req, res) => {
  */
 router.post('/smtp/test', async (req, res) => {
   const authReq = req as AuthRequest;
+  
+  // Disable SMTP testing in DEMO_MODE
+  if (process.env.DEMO_MODE === 'true') {
+    return res.status(403).json({
+      error: 'SMTP testing is disabled in demo mode',
+    });
+  }
+  
   try {
     const { email } = req.body;
 
@@ -320,6 +328,14 @@ router.post('/smtp/test', async (req, res) => {
  */
 router.post('/smtp', async (req, res) => {
   const authReq = req as AuthRequest;
+  
+  // Disable SMTP configuration in DEMO_MODE
+  if (process.env.DEMO_MODE === 'true') {
+    return res.status(403).json({
+      error: 'SMTP configuration is disabled in demo mode',
+    });
+  }
+  
   try {
     const { enabled, host, port, secure, user, password, from, fromName } = req.body;
 

@@ -359,14 +359,14 @@ router.put('/:id', async (req, res) => {
       updates.push('provider_key = ?');
       params.push(provider_key);
     }
-    if (client_id !== undefined) {
+    if (client_id !== undefined && client_id !== null && client_id.trim() !== '') {
       updates.push('client_id = ?');
-      params.push(client_id);
+      params.push(client_id.trim());
     }
-    if (client_secret !== undefined) {
+    if (client_secret !== undefined && client_secret !== null && client_secret.trim() !== '') {
       // Encrypt new secret
       updates.push('client_secret = ?');
-      params.push(encrypt(client_secret));
+      params.push(encrypt(client_secret.trim()));
     }
     if (issuer_url !== undefined) {
       updates.push('issuer_url = ?');

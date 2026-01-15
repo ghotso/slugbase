@@ -187,6 +187,14 @@
     "languageEnglish": "Englisch",
     "languageGerman": "Deutsch",
     "languageFrench": "Französisch",
+    "languageSpanish": "Spanisch",
+    "languageItalian": "Italienisch",
+    "languagePortuguese": "Portugiesisch",
+    "languageDutch": "Niederländisch",
+    "languageRussian": "Russisch",
+    "languageJapanese": "Japanisch",
+    "languageChinese": "Chinesisch",
+    "languagePolish": "Polnisch",
     "emailManagedByOIDC": "Die E-Mail wird von Ihrem Identitätsanbieter verwaltet und kann hier nicht geändert werden."
   },
   "common": {
@@ -200,6 +208,14 @@
     "save": "Speichern",
     "cancel": "Abbrechen",
     "clearFilter": "Filter löschen",
+    "demoMode": "DEMO-MODUS",
+    "demoModeDescription": "Dies ist eine Demonstrationsinstanz. Die Datenbank wird regelmäßig zurückgesetzt.",
+    "demoModeCredentials": "Demo-Anmeldedaten in der Dokumentation verfügbar",
+    "resetDemo": "Demo zurücksetzen",
+    "resetDemoConfirm": "Demo-Datenbank zurücksetzen",
+    "resetDemoMessage": "Dadurch werden alle Daten gelöscht und die Demo-Datenbank auf den ursprünglichen Zustand zurückgesetzt. Diese Aktion kann nicht rückgängig gemacht werden. Fortfahren?",
+    "resetDemoSuccess": "Demo-Datenbank erfolgreich zurückgesetzt",
+    "resetDemoError": "Fehler beim Zurücksetzen der Demo-Datenbank",
     "yes": "Ja",
     "no": "Nein",
     "view": "Ansehen",
@@ -289,6 +305,8 @@
     "settingKey": "Schlüssel",
     "settingValue": "Wert",
     "leaveBlank": "Leer lassen, um aktuellen Wert beizubehalten",
+    "clientIdRequired": "Client-ID ist beim Erstellen eines neuen Providers erforderlich",
+    "leaveBlankToKeep": "Leer lassen, um den aktuellen Wert beizubehalten",
     "confirmDeleteUser": "Möchten Sie diesen Benutzer wirklich löschen?",
     "confirmDeleteTeam": "Möchten Sie dieses Team wirklich löschen?",
     "confirmDeleteGroup": "Möchten Sie dieses Team wirklich löschen?",
@@ -372,7 +390,8 @@
     "sendTest": "Test-E-Mail senden",
     "testSent": "Test-E-Mail erfolgreich gesendet!",
     "testFailed": "Fehler beim Senden der Test-E-Mail",
-    "save": "SMTP-Einstellungen speichern"
+    "save": "SMTP-Einstellungen speichern",
+    "demoModeDisabled": "SMTP-Konfiguration ist im Demo-Modus deaktiviert. Die Datenbank wird regelmäßig zurückgesetzt, und E-Mail-Einstellungen würden verloren gehen."
   },
   "shared": {
     "title": "Geteilt",
