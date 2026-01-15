@@ -39,6 +39,14 @@ jobs:
           mkdir -p slugbase-docs/docs
           cp -v docs/*.md slugbase-docs/docs/ 2>/dev/null || true
           
+          # Copy assets directory (including PNG files and other assets)
+          if [ -d "docs/assets" ]; then
+            mkdir -p slugbase-docs/docs/assets
+            cp -rv docs/assets/* slugbase-docs/docs/assets/ 2>/dev/null || true
+            echo "Assets synced:"
+            ls -la slugbase-docs/docs/assets/ 2>/dev/null || echo "No assets found"
+          fi
+          
           # List what was copied for logging
           echo "Files synced:"
           ls -la slugbase-docs/docs/*.md 2>/dev/null || echo "No markdown files found"
@@ -58,6 +66,10 @@ jobs:
         run: |
           cd slugbase-docs
           git add docs/*.md
+          # Add assets directory if it exists
+          if [ -d "docs/assets" ]; then
+            git add docs/assets/
+          fi
           COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
           git commit -m "docs: sync documentation from slugbase repository
 
