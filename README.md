@@ -175,7 +175,7 @@ slugbase/
 │   │   ├── pages/         # Page components
 │   │   └── utils/         # Utility functions
 │   └── package.json
-├── docs/                   # Documentation (see below)
+├── docs/                   # Documentation source
 ├── docker-compose.yml      # Docker Compose config
 ├── Dockerfile              # Production Dockerfile
 └── package.json            # Root workspace config
@@ -183,19 +183,7 @@ slugbase/
 
 ## Documentation
 
-Comprehensive documentation for all frontend pages is available in the `docs/` directory:
-
-- [Dashboard](./docs/Dashboard.md) - Main landing page
-- [Bookmarks](./docs/Bookmarks.md) - Bookmark management
-- [Folders](./docs/Folders.md) - Folder organization
-- [Tags](./docs/Tags.md) - Tag management
-- [Shared](./docs/Shared.md) - Shared content view
-- [Profile](./docs/Profile.md) - User profile and settings
-- [Admin](./docs/Admin.md) - Admin panel
-- [Login](./docs/Login.md) - Authentication page
-- [Setup](./docs/Setup.md) - Initial setup flow
-- [PasswordReset](./docs/PasswordReset.md) - Password reset flow
-- [SearchEngineGuide](./docs/SearchEngineGuide.md) - Search engine setup guide
+Visit the documentation at https://slugbase.ghotso.dev
 
 ## API Documentation
 
