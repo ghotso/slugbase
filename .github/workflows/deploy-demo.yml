@@ -2,14 +2,12 @@ name: Deploy Demo Instance
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - '.github/workflows/deploy-demo.yml'
-      - 'Dockerfile'
-      - 'backend/**'
-      - 'frontend/**'
 
 env:
   REGISTRY: ghcr.io
@@ -18,10 +16,14 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Only run if triggered by workflow_dispatch or if build workflow succeeded
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       - name: Install and connect to Tailscale
         env:
