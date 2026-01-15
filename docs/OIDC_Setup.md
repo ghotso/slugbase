@@ -49,6 +49,8 @@ For example:
 
 ### Step 2: Configure in SlugBase Admin Panel
 
+![OIDC Provider Configuration Modal](./assets/oidc-admin-modal.png)
+
 **Important**: GitHub's OAuth implementation is not fully OIDC-compliant. SlugBase includes special handling for GitHub, but you need to configure it with GitHub's OAuth endpoints rather than OIDC endpoints.
 
 1. Log in to SlugBase as an admin

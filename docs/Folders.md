@@ -10,6 +10,8 @@ sidebar_position: 5
 
 The Folders page allows users to organize their bookmarks using folders. Folders can be created, edited, deleted, and shared with teams. Each folder can have an optional icon for visual identification.
 
+![Folders Overview](./assets/folders-overview.png)
+
 ## Route
 
 - **Path**: `/folders`
@@ -67,12 +69,16 @@ Each folder card displays:
 
 ### Creating a Folder
 
+![Create Folder Modal](./assets/folder-modal-create.png)
+
 1. Click "Create Folder" button
 2. Fill in the folder modal:
    - Folder name (required)
    - Icon (optional - search or select from popular icons)
    - Share with teams (optional)
 3. Click "Save"
+
+![Folder Icon Picker](./assets/folder-modal-icon-picker.png)
 
 ### Editing a Folder
 
@@ -96,6 +102,8 @@ Each folder card displays:
 - Users can view but not edit shared folders (unless owner)
 
 ## Empty State
+
+![Folders Empty State](./assets/folders-empty-state.png)
 
 When no folders exist:
 

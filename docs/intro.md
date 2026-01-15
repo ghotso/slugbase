@@ -14,6 +14,8 @@ SlugBase is an open-source, self-hosted bookmark manager with optional link forw
 
 SlugBase is a powerful bookmark management system that gives you complete control over how you organize and access your links. Whether you're managing personal bookmarks or sharing resources with teams, SlugBase provides a flexible, privacy-focused solution.
 
+![SlugBase Dashboard](./assets/intro-hero.png)
+
 ## Key Features
 
 ### 📚 Bookmark Management

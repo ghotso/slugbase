@@ -10,6 +10,8 @@ sidebar_position: 7
 
 The Shared page displays bookmarks and folders that have been shared with the current user by other users or teams. It provides a separate view for accessing shared content, distinguishing it from the user's own content.
 
+![Shared Bookmarks Tab](./assets/shared-bookmarks-tab.png)
+
 ## Route
 
 - **Path**: `/shared`
@@ -24,6 +26,10 @@ The page uses a tabbed interface with two sections:
 
 1. **Bookmarks Tab** - Shows shared bookmarks
 2. **Folders Tab** - Shows shared folders
+
+![Shared Folders Tab](./assets/shared-folders-tab.png)
+
+![Shared Bookmark Card Detail](./assets/shared-bookmark-card.png)
 
 ### Shared Bookmarks
 
