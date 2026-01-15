@@ -91,6 +91,14 @@ export default function Profile() {
     { value: 'en', label: t('profile.languageEnglish') },
     { value: 'de', label: t('profile.languageGerman') },
     { value: 'fr', label: t('profile.languageFrench') },
+    { value: 'es', label: t('profile.languageSpanish') },
+    { value: 'it', label: t('profile.languageItalian') },
+    { value: 'pt', label: t('profile.languagePortuguese') },
+    { value: 'nl', label: t('profile.languageDutch') },
+    { value: 'ru', label: t('profile.languageRussian') },
+    { value: 'ja', label: t('profile.languageJapanese') },
+    { value: 'zh', label: t('profile.languageChinese') },
+    { value: 'pl', label: t('profile.languagePolish') },
   ];
 
   const themeOptions = [

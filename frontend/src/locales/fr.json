@@ -187,15 +187,15 @@
     "languageEnglish": "Anglais",
     "languageGerman": "Allemand",
     "languageFrench": "Français",
+    "languageSpanish": "Espagnol",
+    "languageItalian": "Italien",
+    "languagePortuguese": "Portugais",
+    "languageDutch": "Néerlandais",
+    "languageRussian": "Russe",
+    "languageJapanese": "Japonais",
+    "languageChinese": "Chinois",
+    "languagePolish": "Polonais",
     "emailManagedByOIDC": "L'e-mail est géré par votre fournisseur d'identité et ne peut pas être modifié ici."
-  },
-  "admin": {
-    "customEndpoints": "Points de terminaison OIDC personnalisés",
-    "customEndpointsDescription": "Remplacez les chemins de point de terminaison OIDC par défaut. Laissez vide pour utiliser les chemins standard basés sur l'URL de l'émetteur.",
-    "authorizationUrl": "URL d'autorisation",
-    "tokenUrl": "URL du jeton",
-    "userinfoUrl": "URL UserInfo",
-    "optional": "Optionnel"
   },
   "common": {
     "loading": "Chargement...",
@@ -208,6 +208,14 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "clearFilter": "Effacer le filtre",
+    "demoMode": "MODE DÉMO",
+    "demoModeDescription": "Ceci est une instance de démonstration. La base de données est réinitialisée périodiquement.",
+    "demoModeCredentials": "Identifiants de démo disponibles dans la documentation",
+    "resetDemo": "Réinitialiser la démo",
+    "resetDemoConfirm": "Réinitialiser la base de données de démo",
+    "resetDemoMessage": "Cela supprimera toutes les données et restaurera la base de données de démo à son état initial. Cette action ne peut pas être annulée. Continuer ?",
+    "resetDemoSuccess": "Base de données de démo réinitialisée avec succès",
+    "resetDemoError": "Échec de la réinitialisation de la base de données de démo",
     "yes": "Oui",
     "no": "Non",
     "view": "Voir",
@@ -297,6 +305,8 @@
     "settingKey": "Clé",
     "settingValue": "Valeur",
     "leaveBlank": "Laissez vide pour conserver la valeur actuelle",
+    "clientIdRequired": "L'ID client est requis lors de la création d'un nouveau fournisseur",
+    "leaveBlankToKeep": "Laissez vide pour conserver la valeur actuelle",
     "confirmDeleteUser": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
     "confirmDeleteTeam": "Êtes-vous sûr de vouloir supprimer cette équipe ?",
     "confirmDeleteGroup": "Êtes-vous sûr de vouloir supprimer cette équipe ?",
@@ -322,8 +332,7 @@
     "viewApiDocs": "Voir la documentation API",
     "noUserEmailAvailable": "Aucun e-mail utilisateur disponible",
     "manageTeamsTitle": "Gérer les équipes - {{userName}}",
-    "manageMembersTitle": "Gérer les membres - {{teamName}}",
-    "optional": "Optionnel"
+    "manageMembersTitle": "Gérer les membres - {{teamName}}"
   },
   "passwordReset": {
     "title": "Réinitialiser le mot de passe",
@@ -381,7 +390,8 @@
     "sendTest": "Envoyer un e-mail de test",
     "testSent": "E-mail de test envoyé avec succès !",
     "testFailed": "Échec de l'envoi de l'e-mail de test",
-    "save": "Enregistrer les paramètres SMTP"
+    "save": "Enregistrer les paramètres SMTP",
+    "demoModeDisabled": "La configuration SMTP est désactivée en mode démo. La base de données est réinitialisée périodiquement, et les paramètres de messagerie seraient perdus."
   },
   "shared": {
     "title": "Partagé",
