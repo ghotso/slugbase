@@ -10,6 +10,8 @@ sidebar_position: 4
 
 The Bookmarks page is the core of SlugBase, allowing users to create, view, edit, and manage their bookmarks. It features a modern card-based layout, filtering capabilities, and integration with folders and tags.
 
+![Bookmarks Card View](./assets/bookmarks-card-view.png)
+
 ## Route
 
 - **Path**: `/bookmarks`
@@ -36,7 +38,13 @@ The Bookmarks page is the core of SlugBase, allowing users to create, view, edit
 - **View Toggle**: Switch between card and list views with toolbar buttons
 - **Preferences**: View mode and compact mode preferences saved to localStorage
 
+![Bookmarks List View](./assets/bookmarks-list-view.png)
+
+![Bookmarks Table View](./assets/bookmarks-table-view.png)
+
 ### Filtering & Sorting
+
+![Bookmarks Toolbar](./assets/bookmarks-toolbar.png)
 
 - **Filter by Folder**: Dropdown to filter bookmarks by folder
 - **Filter by Tag**: Dropdown to filter bookmarks by tag
@@ -49,6 +57,8 @@ The Bookmarks page is the core of SlugBase, allowing users to create, view, edit
   - Recently Accessed
 
 ### Global Search
+
+![Global Search Modal](./assets/bookmarks-global-search.png)
 
 - **Keyboard Shortcut**: Press `Ctrl+K` (or `Cmd+K` on Mac) from anywhere
 - **Search Scope**: Searches across bookmarks, folders, and tags
@@ -98,6 +108,8 @@ Each bookmark card displays:
 
 ### Creating a Bookmark
 
+![Create Bookmark Modal](./assets/bookmark-modal-create.png)
+
 1. Click "Create Bookmark" button (top-right)
 2. Fill in the bookmark modal:
    - Title (required)
@@ -109,6 +121,8 @@ Each bookmark card displays:
    - Select tags (autocomplete multi-select, create tags inline)
    - Share with teams/users (optional)
 3. Click "Save"
+
+![Bookmark Modal with Forwarding](./assets/bookmark-modal-forwarding.png)
 
 ### Editing a Bookmark
 
@@ -153,6 +167,8 @@ Each bookmark card displays:
 
 ### Bulk Actions
 
+![Bulk Actions Bar](./assets/bookmarks-bulk-actions.png)
+
 1. Click "Select Multiple" button to enter bulk mode
 2. Select bookmarks using checkboxes
 3. Use bulk action buttons:
@@ -169,6 +185,8 @@ Each bookmark card displays:
 3. Toast notification confirms copy
 
 ## Empty State
+
+![Bookmarks Empty State](./assets/bookmarks-empty-state.png)
 
 When no bookmarks exist or filters return no results:
 

@@ -10,6 +10,8 @@ sidebar_position: 12
 
 The Admin page provides administrative controls for managing users, teams, OIDC providers, and system settings. It's accessible only to users with admin privileges and features a tabbed interface for organizing different administrative functions.
 
+![Admin Page Overview](./assets/admin-overview.png)
+
 ## Route
 
 - **Path**: `/admin`
@@ -30,6 +32,8 @@ The admin page uses a tabbed navigation system with four main sections:
 
 ### Users Management
 
+![Admin Users Tab](./assets/admin-users-tab.png)
+
 Comprehensive user management including:
 
 - **View Users**: List all users in the system
@@ -38,6 +42,8 @@ Comprehensive user management including:
 - **Delete Users**: Remove users from the system
 - **Manage Teams**: Assign users to teams
 - **Role Management**: Set user roles (admin/user)
+
+![Admin User Modal](./assets/admin-user-modal.png)
 
 #### User Operations:
 - Create new users with email/password
@@ -48,6 +54,8 @@ Comprehensive user management including:
 
 ### Teams Management
 
+![Admin Teams Tab](./assets/admin-teams-tab.png)
+
 Team-based organization features:
 
 - **View Teams**: List all teams
@@ -57,6 +65,8 @@ Team-based organization features:
 - **Manage Members**: Add/remove users from teams
 - **Team Descriptions**: Optional team descriptions
 
+![Admin Team Modal](./assets/admin-team-modal.png)
+
 #### Team Operations:
 - Create new teams
 - Edit team information
@@ -65,6 +75,8 @@ Team-based organization features:
 - Search teams by name/description
 
 ### OIDC Providers Management
+
+![Admin OIDC Providers Tab](./assets/admin-oidc-tab.png)
 
 Authentication provider configuration:
 
@@ -81,6 +93,8 @@ Authentication provider configuration:
   - Auto-create users option
   - Default role for new users
 
+![Admin OIDC Provider Modal](./assets/admin-oidc-modal.png)
+
 #### Provider Configuration:
 - Support for multiple OIDC providers
 - Secure secret storage (encrypted)
@@ -89,6 +103,8 @@ Authentication provider configuration:
 - Provider testing capabilities
 
 ### Settings Management
+
+![Admin Settings Tab](./assets/admin-settings-tab.png)
 
 System-wide configuration:
 

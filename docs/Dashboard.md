@@ -10,6 +10,8 @@ sidebar_position: 3
 
 The Dashboard is the main landing page of SlugBase, displayed when users navigate to the root path (`/`) after authentication. It provides an overview of the application's main features and quick navigation to core sections.
 
+![Dashboard Overview](./assets/dashboard-overview.png)
+
 ## Route
 
 - **Path**: `/`
@@ -19,6 +21,8 @@ The Dashboard is the main landing page of SlugBase, displayed when users navigat
 ## Features
 
 ### Navigation Cards
+
+![Dashboard Statistics](./assets/dashboard-stats.png)
 
 The dashboard displays three main navigation cards:
 

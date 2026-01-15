@@ -10,6 +10,8 @@ sidebar_position: 11
 
 The Search Engine Guide page provides comprehensive instructions for setting up SlugBase as a custom search engine in various web browsers. This enables users to quickly access their bookmarks directly from the browser's address bar using a custom keyword and slug combination.
 
+![Search Engine Guide Overview](./assets/search-engine-guide-overview.png)
+
 ## Route
 
 - **Path**: `/search-engine-guide`
@@ -233,6 +235,8 @@ Explains the concept:
 - Visual example
 
 ### Your Search URL
+
+![Search URL Display](./assets/search-engine-guide-url.png)
 
 Shows personalized URL:
 - User-specific URL template
