@@ -31,12 +31,19 @@ export async function loadOIDCStrategies() {
     const providersList = Array.isArray(providers) ? providers : [providers];
     
     for (const provider of providersList) {
-      // Decrypt client_secret when loading
-      const decryptedSecret = decrypt(provider.client_secret);
-      
-      // passport-openidconnect verify function signature: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
-      // We'll use: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
-      const verifyFunction = async (iss: string, profile: Profile, context: any, idToken: string, accessToken: string, refreshToken: string, params: any, cb: (error: any, user?: any) => void) => {
+      try {
+        // Decrypt client_secret when loading
+        const decryptedSecret = decrypt(provider.client_secret);
+        
+        // Validate that we have required fields
+        if (!provider.client_id || !decryptedSecret || !provider.issuer_url || !provider.provider_key) {
+          console.error(`Skipping OIDC provider ${provider.provider_key || provider.id}: Missing required fields`);
+          continue;
+        }
+        
+        // passport-openidconnect verify function signature: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
+        // We'll use: (iss, profile, context, idToken, accessToken, refreshToken, params, cb)
+        const verifyFunction = async (iss: string, profile: Profile, context: any, idToken: string, accessToken: string, refreshToken: string, params: any, cb: (error: any, user?: any) => void) => {
             // Extract sub from profile (profile.id is the sub claim) - do this before try block so it's available in catch
             const sub = profile.id || (profile as any).sub;
             if (!sub) {
@@ -171,39 +178,53 @@ export async function loadOIDCStrategies() {
       const tokenURL = provider.token_url || `${provider.issuer_url}/token`;
       const userInfoURL = provider.userinfo_url || `${provider.issuer_url}/userinfo`;
       
-      const strategyConfig: any = {
-        issuer: provider.issuer_url,
-        authorizationURL: authorizationURL,
-        tokenURL: tokenURL,
-        userInfoURL: userInfoURL,
-        clientID: provider.client_id,
-        clientSecret: decryptedSecret,
-        callbackURL: callbackURL,
-        scope: provider.scopes.split(' '),
-        skipUserProfile: false, // Always fetch from userInfo if needed
-      };
-      
-      passport.use(
-        provider.provider_key,
-        new OpenIDConnectStrategy(strategyConfig, verifyFunction as any)
-      );
+        const strategyConfig: any = {
+          issuer: provider.issuer_url,
+          authorizationURL: authorizationURL,
+          tokenURL: tokenURL,
+          userInfoURL: userInfoURL,
+          clientID: provider.client_id,
+          clientSecret: decryptedSecret,
+          callbackURL: callbackURL,
+          scope: provider.scopes.split(' '),
+          skipUserProfile: false, // Always fetch from userInfo if needed
+        };
+        
+        passport.use(
+          provider.provider_key,
+          new OpenIDConnectStrategy(strategyConfig, verifyFunction as any)
+        );
+      } catch (providerError: any) {
+        console.error(`Error loading OIDC provider ${provider.provider_key || provider.id}:`, providerError.message || providerError);
+        // Continue with next provider instead of crashing
+      }
     }
-  } catch (error) {
-    console.error('Error loading OIDC strategies:', error);
+  } catch (error: any) {
+    console.error('Error loading OIDC strategies:', error.message || error);
   }
 }
 
 
 export async function reloadOIDCStrategies() {
-  // Remove existing strategies (except 'jwt' which is our JWT strategy)
-  // Use a type assertion to access internal strategies map
-  const strategies = Object.keys((passport as any)._strategies || {});
-  strategies.forEach((key: string) => {
-    if (key !== 'jwt') {
-      passport.unuse(key);
-    }
-  });
-  
-  // Reload from database
-  await loadOIDCStrategies();
+  try {
+    // Remove existing strategies (except 'jwt' which is our JWT strategy)
+    // Use a type assertion to access internal strategies map
+    const strategies = Object.keys((passport as any)._strategies || {});
+    strategies.forEach((key: string) => {
+      if (key !== 'jwt') {
+        try {
+          passport.unuse(key);
+        } catch (error: any) {
+          // Ignore errors when removing strategies
+          console.warn(`Could not remove OIDC strategy ${key}:`, error.message || error);
+        }
+      }
+    });
+    
+    // Reload from database
+    await loadOIDCStrategies();
+  } catch (error: any) {
+    console.error('Error reloading OIDC strategies:', error.message || error);
+    // Don't throw - allow the operation to continue even if strategy reload fails
+  }
 }

@@ -56,8 +56,9 @@ export default function AdminOIDCProviders() {
       async () => {
         try {
           await api.delete(`/oidc-providers/${id}`);
-          loadProviders();
+          await loadProviders();
         } catch (error: any) {
+          console.error('Failed to delete provider:', error);
           alert(error.response?.data?.error || t('common.error'));
         }
       },
