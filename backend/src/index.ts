@@ -376,8 +376,9 @@ async function start() {
 function setupScheduledReset(cronSchedule: string) {
   try {
     // Dynamic import to avoid issues if node-cron is not installed
-    import('node-cron').then((cron) => {
-      cron.default.schedule(cronSchedule, async () => {
+    import('node-cron').then((cronModule: any) => {
+      const cron = cronModule.default || cronModule;
+      cron.schedule(cronSchedule, async () => {
         console.log('🔄 Scheduled database reset triggered...');
         try {
           await resetDatabase();
@@ -389,7 +390,7 @@ function setupScheduledReset(cronSchedule: string) {
         timezone: 'UTC',
       });
       console.log(`   ✓ Reset scheduled with pattern: ${cronSchedule}`);
-    }).catch((error) => {
+    }).catch((error: any) => {
       console.warn('⚠️  node-cron not available, scheduled reset disabled:', error.message);
     });
   } catch (error: any) {
