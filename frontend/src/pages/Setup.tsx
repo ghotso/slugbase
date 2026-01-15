@@ -88,8 +88,17 @@ export default function Setup() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-            <UserPlus className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/slugbase_icon_blue.svg" 
+              alt="SlugBase" 
+              className="h-16 w-16 dark:hidden"
+            />
+            <img 
+              src="/slugbase_icon_white.svg" 
+              alt="SlugBase" 
+              className="h-16 w-16 hidden dark:block"
+            />
           </div>
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
             {t('setup.title')}
