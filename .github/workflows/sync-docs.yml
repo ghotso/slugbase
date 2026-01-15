@@ -71,8 +71,6 @@ jobs:
             git add docs/assets/
           fi
           COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
-          git commit -m "docs: sync documentation from slugbase repository
-
-          Triggered by: $COMMIT_URL
-          [skip ci]" || exit 0
+          # Note: Commit message intentionally does NOT include [skip ci] to ensure docs CI/CD runs
+          git commit -m "docs: sync documentation from slugbase repository" -m "Triggered by: $COMMIT_URL" || exit 0
           git push
