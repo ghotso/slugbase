@@ -120,7 +120,7 @@ After exploring the demo:
 
 1. **[Install SlugBase](setup)** - Deploy your own instance
 2. **[Read the Documentation](intro)** - Learn about all features
-3. **[Join the Community](../CONTRIBUTING)** - Contribute or get help
+3. **[Join the Community](https://github.com/ghotso/slugbase/blob/main/CONTRIBUTING.md)** - Contribute or get help
 
 ## 💡 Tips
 
