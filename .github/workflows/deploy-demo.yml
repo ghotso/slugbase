@@ -16,6 +16,10 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      actions: read
     # Only run if triggered by workflow_dispatch or if build workflow succeeded
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     
