@@ -66,27 +66,25 @@ All screenshots should be:
 - [x] `password-reset-form.png` - Password reset form (with token) showing new password and confirm password fields
 
 ### 11. Search Engine Guide (`SearchEngineGuide.md`)
-- [ ] `search-engine-guide-overview.png` - Search engine guide page showing "How It Works", "Your Search URL", browser instructions, and usage example
-- [ ] `search-engine-guide-url.png` - Close-up of the personalized search URL display
+- [x] `search-engine-guide-overview.png` - Search engine guide page showing "How It Works", "Your Search URL", browser instructions, and usage example
+- [x] `search-engine-guide-url.png` - Close-up of the personalized search URL display
 
 ### 12. Admin (`Admin.md`)
-- [ ] `admin-overview.png` - Admin page showing tabbed interface (Users, Teams, OIDC Providers, Settings tabs)
-- [ ] `admin-users-tab.png` - Users tab showing user list with search, create, edit, delete actions
-- [ ] `admin-teams-tab.png` - Teams tab showing team list
-- [ ] `admin-oidc-tab.png` - OIDC Providers tab showing configured providers list
-- [ ] `admin-settings-tab.png` - Settings tab showing SMTP configuration form
-- [ ] `admin-user-modal.png` - User creation/edit modal
-- [ ] `admin-team-modal.png` - Team creation/edit modal
-- [ ] `admin-oidc-modal.png` - OIDC provider configuration modal
+- [x] `admin-overview.png` - Admin page showing tabbed interface (Users, Teams, OIDC Providers, Settings tabs)
+- [x] `admin-users-tab.png` - Users tab showing user list with search, create, edit, delete actions
+- [x] `admin-teams-tab.png` - Teams tab showing team list
+- [x] `admin-oidc-tab.png` - OIDC Providers tab showing configured providers list
+- [x] `admin-settings-tab.png` - Settings tab showing SMTP configuration form
+- [x] `admin-user-modal.png` - User creation/edit modal
+- [x] `admin-team-modal.png` - Team creation/edit modal
+- [x] `admin-oidc-modal.png` - OIDC provider configuration modal
 
 ### 13. OIDC Setup (`OIDC_Setup.md`)
-- [ ] `oidc-admin-modal.png` - Admin OIDC provider modal showing all configuration fields
-- [ ] `oidc-github-oauth-app.png` - GitHub OAuth App creation page (optional - can be text instructions)
-- [ ] `oidc-google-cloud-console.png` - Google Cloud Console OAuth client creation (optional - can be text instructions)
+- [x] Uses `admin-oidc-modal.png` from Admin section (reused)
 
 ## Total Screenshots Required
 
-**Total: 33 screenshots**
+**Total: 30 screenshots** (OIDC Setup reuses admin-oidc-modal.png)
 
 ## Notes
 
