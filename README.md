@@ -4,6 +4,24 @@
 
 SlugBase is an open-source, self-hosted bookmark manager with optional link forwarding. Store and organize your bookmarks, and optionally expose them as personal short redirect URLs.
 
+## 🚀 Try the Demo
+
+Check out the live demo at **[https://slugbase-demo.ghotso.dev](https://slugbase-demo.ghotso.dev)**
+
+### Demo Credentials
+
+The demo includes pre-configured users with sample data:
+
+**Admin User:**
+- Email: `admin@demo.slugbase`
+- Password: `DemoAdmin123!`
+
+**Regular Users:**
+- Alice: `alice@demo.slugbase` / `DemoUser123!`
+- Bob: `bob@demo.slugbase` / `DemoUser123!`
+
+*Note: The demo database resets hourly to restore the default state.*
+
 ## Features
 
 ### Core Functionality

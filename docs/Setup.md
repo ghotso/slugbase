@@ -1,7 +1,7 @@
 ---
 id: setup
 title: Setup Page
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # Setup Page

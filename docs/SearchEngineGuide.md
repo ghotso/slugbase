@@ -1,7 +1,7 @@
 ---
 id: search-engine-guide
 title: Search Engine Guide
-sidebar_position: 11
+sidebar_position: 12
 ---
 
 # Search Engine Guide Page

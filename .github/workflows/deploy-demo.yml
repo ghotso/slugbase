@@ -99,8 +99,8 @@ jobs:
             -e JWT_SECRET="$JWT_SECRET" \
             -e ENCRYPTION_KEY="$ENCRYPTION_KEY" \
             -e SESSION_SECRET="$SESSION_SECRET" \
-            -e BASE_URL="https://demo.slugbase.ghotso.dev" \
-            -e FRONTEND_URL="https://demo.slugbase.ghotso.dev" \
+            -e BASE_URL="https://slugbase-demo.ghotso.dev" \
+            -e FRONTEND_URL="https://slugbase-demo.ghotso.dev" \
             -e TS_AUTHKEY="$TS_AUTHKEY" \
             $REGISTRY/$IMAGE_NAME:latest
           

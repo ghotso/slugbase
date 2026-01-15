@@ -1,7 +1,7 @@
 ---
 id: password-reset
 title: Password Reset Page
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 # Password Reset Page

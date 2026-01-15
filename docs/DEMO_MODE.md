@@ -1,3 +1,9 @@
+---
+id: demo-mode
+title: Demo Mode (Technical)
+sidebar_position: 15
+---
+
 # Demo Mode Documentation
 
 ## Overview

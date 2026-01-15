@@ -1,7 +1,7 @@
 ---
 id: dashboard
 title: Dashboard Page
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Dashboard Page

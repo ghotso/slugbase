@@ -1,7 +1,7 @@
 ---
 id: bookmarks
 title: Bookmarks Page
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 # Bookmarks Page
