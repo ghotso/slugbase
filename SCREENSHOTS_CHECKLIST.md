@@ -43,27 +43,27 @@ All screenshots should be:
 - [x] `tags-empty-state.png` - Empty state with tag icon and "Create Tag" button
 
 ### 6. Shared (`Shared.md`)
-- [ ] `shared-bookmarks-tab.png` - Shared page with Bookmarks tab active, showing shared bookmark cards with "Shared by" information
-- [ ] `shared-folders-tab.png` - Shared page with Folders tab active, showing shared folder cards
-- [ ] `shared-bookmark-card.png` - Close-up of a shared bookmark card showing owner info, shared badge, and read-only indicators
+- [x] `shared-bookmarks-tab.png` - Shared page with Bookmarks tab active, showing shared bookmark cards with "Shared by" information
+- [x] `shared-folders-tab.png` - Shared page with Folders tab active, showing shared folder cards
+- [x] `shared-bookmark-card.png` - Close-up of a shared bookmark card showing owner info, shared badge, and read-only indicators
 
 ### 7. Profile (`Profile.md`)
-- [ ] `profile-overview.png` - Profile page showing Account Information and Preferences sections
-- [ ] `profile-email-edit.png` - Profile page with email in edit mode
-- [ ] `profile-preferences.png` - Preferences section showing language and theme dropdowns
-- [ ] `profile-email-pending.png` - Profile page showing email verification pending banner
+- [x] `profile-overview.png` - Profile page showing Account Information and Preferences sections
+- [x] `profile-email-edit.png` - Profile page with email in edit mode
+- [x] `profile-preferences.png` - Preferences section showing language and theme dropdowns
+- [x] `profile-email-pending.png` - Profile page showing email verification pending banner
 
 ### 8. Login (`Login.md`)
-- [ ] `login-local-only.png` - Login page with only email/password form (no OIDC providers)
-- [ ] `login-with-oidc.png` - Login page showing local auth form and OIDC provider buttons (e.g., "Login with GitHub", "Login with Google")
+- [X] `login-local-only.png` - Login page with only email/password form (no OIDC providers)
+- [x] `login-with-oidc.png` - Login page showing local auth form and OIDC provider buttons (e.g., "Login with GitHub", "Login with Google")
 
 ### 9. Setup (`Setup.md`)
-- [ ] `setup-form.png` - Setup page showing initial admin user creation form with email, name, password fields, and admin notice
-- [ ] `setup-success.png` - Setup success state with checkmark icon and redirect message
+- [x] `setup-form.png` - Setup page showing initial admin user creation form with email, name, password fields, and admin notice
+- [x] `setup-success.png` - Setup success state with checkmark icon and redirect message
 
 ### 10. Password Reset (`PasswordReset.md`)
-- [ ] `password-reset-request.png` - Password reset request step showing email input form
-- [ ] `password-reset-form.png` - Password reset form (with token) showing new password and confirm password fields
+- [x] `password-reset-request.png` - Password reset request step showing email input form
+- [x] `password-reset-form.png` - Password reset form (with token) showing new password and confirm password fields
 
 ### 11. Search Engine Guide (`SearchEngineGuide.md`)
 - [ ] `search-engine-guide-overview.png` - Search engine guide page showing "How It Works", "Your Search URL", browser instructions, and usage example
