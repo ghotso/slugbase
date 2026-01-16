@@ -19,15 +19,32 @@ function getAllIconNames(): string[] {
     'IconProps',
     'LucideProps',
     'default',
+    // Exclude non-icon exports
+    'defaultProps',
+    'forwardRef',
+    'memo',
+    'lazy',
+    'Suspense',
+    'Fragment',
+    'StrictMode',
   ]);
 
   for (const name in LucideIcons) {
-    if (!excludeNames.has(name) && typeof (LucideIcons as any)[name] === 'function') {
-      // Check if it's a React component (has displayName or is a function component)
-      const component = (LucideIcons as any)[name];
-      if (component && (component.displayName || component.name)) {
-        iconNames.push(name);
-      }
+    // Skip excluded names
+    if (excludeNames.has(name)) continue;
+    
+    // Skip names starting with lowercase (likely not icon components)
+    if (name[0] && name[0] === name[0].toLowerCase()) continue;
+    
+    const component = (LucideIcons as any)[name];
+    
+    // Check if it's a function/component
+    if (typeof component !== 'function') continue;
+    
+    // Verify it's actually a React component by checking for render capability
+    // All Lucide icons are React components, so if it's a function starting with uppercase, it's likely an icon
+    if (name && name[0] === name[0].toUpperCase()) {
+      iconNames.push(name);
     }
   }
 
@@ -66,6 +83,11 @@ const popularIcons = [
   'Settings',
   'Users',
   'Package',
+  'Wrench',
+  'Tool',
+  'Hammer',
+  'Screwdriver',
+  'WrenchIcon',
   'FolderPlus',
   'FolderMinus',
   'FolderCheck',
@@ -142,8 +164,19 @@ export default function FolderIcon({ iconName, className = '', size = 20 }: Fold
     return <DefaultFolderIcon className={className} style={{ width: `${size}px`, height: `${size}px` }} />;
   }
 
-  // Try to get the icon from lucide-react
-  const IconComponent = (LucideIcons as any)[iconName] as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  // Try to get the icon from lucide-react (exact match first)
+  let IconComponent = (LucideIcons as any)[iconName] as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+
+  // If exact match not found, try case-insensitive lookup
+  if (!IconComponent) {
+    const iconNameLower = iconName.toLowerCase();
+    for (const key in LucideIcons) {
+      if (key.toLowerCase() === iconNameLower && typeof (LucideIcons as any)[key] === 'function') {
+        IconComponent = (LucideIcons as any)[key] as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+        break;
+      }
+    }
+  }
 
   if (IconComponent) {
     return <IconComponent className={className} style={{ width: `${size}px`, height: `${size}px` }} />;

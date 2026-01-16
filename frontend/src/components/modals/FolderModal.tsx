@@ -200,7 +200,9 @@ export default function FolderModal({
               <button
                 type="button"
                 onClick={() => {
-                  const matchedIcon = allIcons.find(icon => icon.toLowerCase() === iconSearchQuery.trim().toLowerCase());
+                  const query = iconSearchQuery.trim();
+                  // Find the exact icon name (case-sensitive match from allIcons)
+                  const matchedIcon = allIcons.find(icon => icon.toLowerCase() === query.toLowerCase());
                   if (matchedIcon) {
                     setFormData({ ...formData, icon: matchedIcon });
                     setIconSearchQuery('');
@@ -208,7 +210,9 @@ export default function FolderModal({
                 }}
                 className="w-full px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2"
               >
-                <span>{t('folders.useIcon')}: {allIcons.find(icon => icon.toLowerCase() === iconSearchQuery.trim().toLowerCase())}</span>
+                <span>
+                  {t('folders.useIcon')}: <code className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded">{allIcons.find(icon => icon.toLowerCase() === iconSearchQuery.trim().toLowerCase())}</code>
+                </span>
               </button>
             </div>
           )}
@@ -241,8 +245,22 @@ export default function FolderModal({
               </div>
             ) : (
               filteredIcons.map((iconName) => {
-                const IconComponent = (LucideIcons as any)[iconName];
-                if (!IconComponent) return null;
+                // Try exact match first
+                let IconComponent = (LucideIcons as any)[iconName];
+                
+                // If not found, try case-insensitive lookup
+                if (!IconComponent || typeof IconComponent !== 'function') {
+                  const iconNameLower = iconName.toLowerCase();
+                  for (const key in LucideIcons) {
+                    if (key.toLowerCase() === iconNameLower && typeof (LucideIcons as any)[key] === 'function') {
+                      IconComponent = (LucideIcons as any)[key];
+                      break;
+                    }
+                  }
+                }
+                
+                if (!IconComponent || typeof IconComponent !== 'function') return null;
+                
                 return (
                   <button
                     key={iconName}
