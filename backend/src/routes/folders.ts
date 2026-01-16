@@ -81,7 +81,18 @@ router.get('/', async (req, res) => {
     if (teamIds.length > 0) {
       params.push(...teamIds);
     }
-    sql += ' ORDER BY f.name';
+    
+    // Add sorting
+    const sortBy = (req.query.sort_by as string) || 'alphabetical';
+    switch (sortBy) {
+      case 'recently_added':
+        sql += ' ORDER BY f.created_at DESC';
+        break;
+      case 'alphabetical':
+      default:
+        sql += ' ORDER BY f.name ASC';
+        break;
+    }
 
     const folders = await query(sql, params);
 

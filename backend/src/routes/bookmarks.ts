@@ -575,6 +575,87 @@ router.get('/:id', async (req, res) => {
 
 /**
  * @swagger
+ * /api/bookmarks/{id}/track-access:
+ *   post:
+ *     summary: Track bookmark access
+ *     description: Increments access_count and updates last_accessed_at for a bookmark when it is opened
+ *     tags: [Bookmarks]
+ *     security:
+ *       - cookieAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bookmark ID
+ *     responses:
+ *       200:
+ *         description: Access tracked successfully
+ *       404:
+ *         description: Bookmark not found
+ *       401:
+ *         description: Unauthorized
+ */
+// Track bookmark access (must be before PUT /:id)
+router.post('/:id/track-access', async (req, res) => {
+  const authReq = req as AuthRequest;
+  try {
+    const userId = authReq.user!.id;
+    const { id } = req.params;
+
+    // Check if bookmark exists and user has access
+    const userTeams = await query(
+      'SELECT team_id FROM team_members WHERE user_id = ?',
+      [userId]
+    );
+    const teamIds = Array.isArray(userTeams) ? userTeams.map((t: any) => t.team_id) : [];
+
+    let sql = `
+      SELECT DISTINCT b.id
+      FROM bookmarks b
+      LEFT JOIN bookmark_user_shares bus ON b.id = bus.bookmark_id
+      LEFT JOIN bookmark_team_shares bts ON b.id = bts.bookmark_id
+      LEFT JOIN bookmark_folders bf ON b.id = bf.bookmark_id
+      LEFT JOIN folder_user_shares fus ON bf.folder_id = fus.folder_id
+      LEFT JOIN folder_team_shares fts ON bf.folder_id = fts.folder_id
+      WHERE b.id = ? AND (b.user_id = ?
+        OR bus.user_id = ?
+        OR (bts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND bts.team_id IS NOT NULL)
+        OR fus.user_id = ?
+        OR (fts.team_id IN (${teamIds.length > 0 ? teamIds.map(() => '?').join(',') : 'NULL'}) AND fts.team_id IS NOT NULL AND bf.folder_id IS NOT NULL))
+    `;
+    const params: any[] = [id, userId, userId, userId];
+    if (teamIds.length > 0) {
+      params.push(...teamIds);
+      params.push(...teamIds);
+    }
+
+    const bookmark = await queryOne(sql, params);
+
+    if (!bookmark) {
+      return res.status(404).json({ error: 'Bookmark not found' });
+    }
+
+    // Update access_count and last_accessed_at
+    await execute(
+      `UPDATE bookmarks 
+       SET access_count = COALESCE(access_count, 0) + 1,
+           last_accessed_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [id]
+    );
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Failed to track bookmark access:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
  * /api/bookmarks:
  *   post:
  *     summary: Create a new bookmark

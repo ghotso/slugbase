@@ -7,18 +7,29 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { query, queryOne, execute } from './index.js';
 import { generateUserKey } from '../utils/user-key.js';
-import { DEMO_DATA } from './seed-data.js';
+import { DEMO_DATA, DEMO_TEAMS } from './seed-data.js';
 import { normalizeEmail, sanitizeString } from '../utils/validation.js';
 
 /**
  * Seed the database with demo data
  * This should only be called when DEMO_MODE is enabled
+ * Includes: users, folders, tags, bookmarks, teams, team memberships, and bookmark sharing
  */
 export async function seedDatabase(): Promise<void> {
+  // Safety check: Only allow seeding in DEMO_MODE
+  if (process.env.DEMO_MODE !== 'true') {
+    throw new Error('seedDatabase() should only be called when DEMO_MODE=true');
+  }
+
   console.log('🌱 Starting database seeding for DEMO_MODE...');
 
   try {
-    // Create users and their data
+    // Map to store user IDs by email (for sharing and team membership)
+    const userIdMap = new Map<string, string>(); // email -> user id
+    // Map to store bookmark IDs by composite key (ownerEmail:slug for sharing)
+    const bookmarkIdMap = new Map<string, string>(); // "email:slug" -> bookmark id
+    
+    // First pass: Create all users and collect their IDs
     for (const userData of DEMO_DATA) {
       const { user, folders, tags, bookmarks } = userData;
 
@@ -90,6 +101,9 @@ export async function seedDatabase(): Promise<void> {
 
         console.log(`   ✓ Created user: ${user.email} (${userKey})`);
       }
+      
+      // Store user ID in map for sharing/teams
+      userIdMap.set(normalizedEmail, userId);
 
       // Create folders
       const folderMap = new Map<string, string>(); // name -> id
@@ -141,8 +155,8 @@ export async function seedDatabase(): Promise<void> {
         let existingBookmark: any = null;
         if (bookmark.slug) {
           existingBookmark = await queryOne(
-            'SELECT id FROM bookmarks WHERE slug = ?',
-            [bookmark.slug]
+            'SELECT id FROM bookmarks WHERE user_id = ? AND slug = ?',
+            [userId, bookmark.slug]
           );
         }
 
@@ -173,51 +187,201 @@ export async function seedDatabase(): Promise<void> {
             ]
           );
           console.log(`     ✓ Created bookmark: ${bookmark.title}`);
+        }
+        
+        // Store bookmark ID for sharing (using composite key: email:slug)
+        if (bookmark.slug) {
+          bookmarkIdMap.set(`${normalizedEmail}:${bookmark.slug}`, bookmarkId);
+        }
 
-          // Link bookmark to folders
-          if (bookmark.folderNames && bookmark.folderNames.length > 0) {
-            for (const folderName of bookmark.folderNames) {
-              const folderId = folderMap.get(folderName);
-              if (folderId) {
-                try {
-                  await execute(
-                    'INSERT INTO bookmark_folders (bookmark_id, folder_id) VALUES (?, ?)',
-                    [bookmarkId, folderId]
-                  );
-                } catch (error: any) {
-                  // Ignore duplicate key errors
-                  if (
-                    !error.message ||
-                    (!error.message.includes('UNIQUE constraint') &&
-                      !error.message.includes('duplicate'))
-                  ) {
-                    throw error;
-                  }
+        // Link bookmark to folders
+        if (bookmark.folderNames && bookmark.folderNames.length > 0) {
+          for (const folderName of bookmark.folderNames) {
+            const folderId = folderMap.get(folderName);
+            if (folderId) {
+              try {
+                await execute(
+                  'INSERT INTO bookmark_folders (bookmark_id, folder_id) VALUES (?, ?)',
+                  [bookmarkId, folderId]
+                );
+              } catch (error: any) {
+                // Ignore duplicate key errors
+                if (
+                  !error.message ||
+                  (!error.message.includes('UNIQUE constraint') &&
+                    !error.message.includes('duplicate'))
+                ) {
+                  throw error;
                 }
               }
             }
           }
+        }
 
-          // Link bookmark to tags
-          if (bookmark.tagNames && bookmark.tagNames.length > 0) {
-            for (const tagName of bookmark.tagNames) {
-              const tagId = tagMap.get(tagName);
-              if (tagId) {
-                try {
-                  await execute(
-                    'INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)',
-                    [bookmarkId, tagId]
-                  );
-                } catch (error: any) {
-                  // Ignore duplicate key errors
-                  if (
-                    !error.message ||
-                    (!error.message.includes('UNIQUE constraint') &&
-                      !error.message.includes('duplicate'))
-                  ) {
-                    throw error;
-                  }
+        // Link bookmark to tags
+        if (bookmark.tagNames && bookmark.tagNames.length > 0) {
+          for (const tagName of bookmark.tagNames) {
+            const tagId = tagMap.get(tagName);
+            if (tagId) {
+              try {
+                await execute(
+                  'INSERT INTO bookmark_tags (bookmark_id, tag_id) VALUES (?, ?)',
+                  [bookmarkId, tagId]
+                );
+              } catch (error: any) {
+                // Ignore duplicate key errors
+                if (
+                  !error.message ||
+                  (!error.message.includes('UNIQUE constraint') &&
+                    !error.message.includes('duplicate'))
+                ) {
+                  throw error;
                 }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Create teams and add members
+    console.log('📦 Creating teams...');
+    const teamIdMap = new Map<string, string>(); // team name -> team id
+    
+    for (const team of DEMO_TEAMS) {
+      // Check if team already exists
+      const existingTeam = await queryOne(
+        'SELECT id FROM teams WHERE name = ?',
+        [team.name]
+      );
+      
+      let teamId: string;
+      if (existingTeam) {
+        teamId = (existingTeam as any).id;
+        console.log(`   Using existing team: ${team.name}`);
+      } else {
+        teamId = uuidv4();
+        await execute(
+          'INSERT INTO teams (id, name, description) VALUES (?, ?, ?)',
+          [teamId, sanitizeString(team.name), team.description ? sanitizeString(team.description) : null]
+        );
+        console.log(`   ✓ Created team: ${team.name}`);
+      }
+      
+      teamIdMap.set(team.name, teamId);
+      
+      // Add team members
+      for (const memberEmail of team.memberEmails) {
+        const normalizedMemberEmail = normalizeEmail(memberEmail);
+        const memberUserId = userIdMap.get(normalizedMemberEmail);
+        
+        if (!memberUserId) {
+          console.warn(`   ⚠️  Warning: User ${memberEmail} not found for team ${team.name}`);
+          continue;
+        }
+        
+        // Check if membership already exists
+        const existingMember = await queryOne(
+          'SELECT * FROM team_members WHERE team_id = ? AND user_id = ?',
+          [teamId, memberUserId]
+        );
+        
+        if (!existingMember) {
+          try {
+            await execute(
+              'INSERT INTO team_members (team_id, user_id) VALUES (?, ?)',
+              [teamId, memberUserId]
+            );
+            console.log(`     ✓ Added ${memberEmail} to ${team.name}`);
+          } catch (error: any) {
+            // Ignore duplicate key errors
+            if (
+              !error.message ||
+              (!error.message.includes('UNIQUE constraint') &&
+                !error.message.includes('duplicate'))
+            ) {
+              throw error;
+            }
+          }
+        }
+      }
+    }
+
+    // Create bookmark shares (both user-to-user and team shares)
+    console.log('🔗 Creating bookmark shares...');
+    
+    for (const userData of DEMO_DATA) {
+      const { user, bookmarks } = userData;
+      const normalizedEmail = normalizeEmail(user.email);
+      const ownerUserId = userIdMap.get(normalizedEmail);
+      
+      if (!ownerUserId) continue;
+      
+      for (const bookmark of bookmarks) {
+        if (!bookmark.slug) continue;
+        
+        const bookmarkKey = `${normalizedEmail}:${bookmark.slug}`;
+        const bookmarkId = bookmarkIdMap.get(bookmarkKey);
+        if (!bookmarkId) continue;
+        
+        // Share with teams
+        if (bookmark.shareWithTeams && bookmark.shareWithTeams.length > 0) {
+          for (const teamName of bookmark.shareWithTeams) {
+            const teamId = teamIdMap.get(teamName);
+            if (!teamId) {
+              console.warn(`   ⚠️  Warning: Team ${teamName} not found for bookmark ${bookmark.title}`);
+              continue;
+            }
+            
+            try {
+              await execute(
+                'INSERT INTO bookmark_team_shares (bookmark_id, team_id) VALUES (?, ?)',
+                [bookmarkId, teamId]
+              );
+              console.log(`     ✓ Shared ${bookmark.title} with team ${teamName}`);
+            } catch (error: any) {
+              // Ignore duplicate key errors
+              if (
+                !error.message ||
+                (!error.message.includes('UNIQUE constraint') &&
+                  !error.message.includes('duplicate'))
+              ) {
+                throw error;
+              }
+            }
+          }
+        }
+        
+        // Share with users
+        if (bookmark.shareWithUsers && bookmark.shareWithUsers.length > 0) {
+          for (const shareUserEmail of bookmark.shareWithUsers) {
+            const normalizedShareEmail = normalizeEmail(shareUserEmail);
+            const shareUserId = userIdMap.get(normalizedShareEmail);
+            
+            if (!shareUserId) {
+              console.warn(`   ⚠️  Warning: User ${shareUserEmail} not found for bookmark ${bookmark.title}`);
+              continue;
+            }
+            
+            // Don't share with yourself
+            if (shareUserId === ownerUserId) {
+              continue;
+            }
+            
+            try {
+              await execute(
+                'INSERT INTO bookmark_user_shares (bookmark_id, user_id) VALUES (?, ?)',
+                [bookmarkId, shareUserId]
+              );
+              console.log(`     ✓ Shared ${bookmark.title} with user ${shareUserEmail}`);
+            } catch (error: any) {
+              // Ignore duplicate key errors
+              if (
+                !error.message ||
+                (!error.message.includes('UNIQUE constraint') &&
+                  !error.message.includes('duplicate'))
+              ) {
+                throw error;
               }
             }
           }

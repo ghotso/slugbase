@@ -135,7 +135,8 @@
     "edit": "Edit Folder",
     "delete": "Delete Folder",
     "deleteFolder": "Delete Folder",
-    "name": "Folder Name",
+    "name": "Name",
+    "folderName": "Folder Name",
     "icon": "Icon",
     "searchIcons": "Search icons by name...",
     "noIcon": "No Icon",
@@ -154,7 +155,12 @@
     "sharedWith": "Shared with:",
     "shareWithTeams": "Share with Teams",
     "shareWithTeamsDescription": "Select teams to share this folder with. All bookmarks in this folder will be shared with selected teams.",
-    "shared": "Shared"
+    "shared": "Shared",
+    "viewCard": "Card View",
+    "viewList": "List View",
+    "compactMode": "Compact Mode",
+    "sortAlphabetical": "Alphabetical",
+    "sortRecentlyAdded": "Recently Added"
   },
   "tags": {
     "title": "Tags",
@@ -162,10 +168,16 @@
     "edit": "Edit Tag",
     "delete": "Delete Tag",
     "deleteTag": "Delete Tag",
-    "name": "Tag Name",
+    "name": "Name",
+    "tagName": "Tag Name",
     "empty": "No tags yet",
     "deleteConfirm": "Are you sure you want to delete this tag?",
-    "deleteConfirmWithName": "Are you sure you want to delete \"{{name}}\"?"
+    "deleteConfirmWithName": "Are you sure you want to delete \"{{name}}\"?",
+    "viewCard": "Card View",
+    "viewList": "List View",
+    "compactMode": "Compact Mode",
+    "sortAlphabetical": "Alphabetical",
+    "sortRecentlyAdded": "Recently Added"
   },
   "profile": {
     "title": "Profile",

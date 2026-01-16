@@ -51,9 +51,9 @@ export default function BookmarkListItem({
         selected
           ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
           : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-      } hover:shadow transition-all duration-200 ${compact ? 'p-2.5' : 'p-4'}`}
+      } hover:shadow transition-all duration-200 ${compact ? 'p-2.5 min-h-[80px]' : 'p-4'}`}
     >
-      <div className="flex items-center gap-4">
+      <div className={`flex items-center ${compact ? 'gap-3' : 'gap-4'}`}>
         {bulkMode && (
           <button
             onClick={onSelect}
@@ -71,10 +71,10 @@ export default function BookmarkListItem({
               <h3 className={`${compact ? 'text-sm' : 'text-[15px]'} font-medium text-gray-900 dark:text-white mb-1`}>
                 {bookmark.title}
               </h3>
-              <p className={`${compact ? 'text-xs' : 'text-sm'} text-gray-700 dark:text-gray-200 truncate mb-2`}>
+              <p className={`${compact ? 'text-xs' : 'text-sm'} text-gray-700 dark:text-gray-200 truncate ${compact ? 'mb-1' : 'mb-2'}`}>
                 {bookmark.url}
               </p>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className={`flex flex-wrap items-center gap-2 ${compact ? 'min-h-[24px]' : ''}`}>
                 {bookmark.folders && bookmark.folders.length > 0 && (
                   bookmark.folders.slice(0, 1).map((folder) => (
                     <span
@@ -87,7 +87,7 @@ export default function BookmarkListItem({
                   ))
                 )}
                 {bookmark.tags && bookmark.tags.length > 0 && (
-                  bookmark.tags.slice(0, 3).map((tag) => (
+                  bookmark.tags.slice(0, compact ? 2 : 3).map((tag) => (
                     <span
                       key={tag.id}
                       className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md`}

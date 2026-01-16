@@ -10,6 +10,7 @@ interface FolderIconProps {
 
 // Get all available icon names from lucide-react
 // Filter out non-icon exports and get all icon component names
+// Lucide icons are React forward ref components (objects with $$typeof and render method)
 function getAllIconNames(): string[] {
   const iconNames: string[] = [];
   const excludeNames = new Set([
@@ -19,15 +20,39 @@ function getAllIconNames(): string[] {
     'IconProps',
     'LucideProps',
     'default',
+    // Exclude non-icon exports
+    'defaultProps',
+    'forwardRef',
+    'memo',
+    'lazy',
+    'Suspense',
+    'Fragment',
+    'StrictMode',
   ]);
 
   for (const name in LucideIcons) {
-    if (!excludeNames.has(name) && typeof (LucideIcons as any)[name] === 'function') {
-      // Check if it's a React component (has displayName or is a function component)
-      const component = (LucideIcons as any)[name];
-      if (component && (component.displayName || component.name)) {
-        iconNames.push(name);
-      }
+    // Skip excluded names
+    if (excludeNames.has(name)) continue;
+    
+    // Skip names starting with lowercase (likely not icon components)
+    if (name[0] && name[0] === name[0].toLowerCase()) continue;
+    
+    // Skip names ending with 'Icon' (these are typically type exports)
+    if (name.endsWith('Icon')) continue;
+    
+    const component = (LucideIcons as any)[name];
+    
+    // Check if it's a valid React component
+    // Lucide icons can be either:
+    // 1. Function components (typeof === 'function')
+    // 2. Forward ref components (object with $$typeof and render method)
+    const isFunctionComponent = typeof component === 'function';
+    const isForwardRefComponent = component && 
+      typeof component === 'object' && 
+      (component.$$typeof || component.render);
+    
+    if (isFunctionComponent || isForwardRefComponent) {
+      iconNames.push(name);
     }
   }
 
@@ -66,6 +91,10 @@ const popularIcons = [
   'Settings',
   'Users',
   'Package',
+  'Wrench',
+  'Tool',
+  'Hammer',
+  'Screwdriver',
   'FolderPlus',
   'FolderMinus',
   'FolderCheck',
@@ -142,10 +171,32 @@ export default function FolderIcon({ iconName, className = '', size = 20 }: Fold
     return <DefaultFolderIcon className={className} style={{ width: `${size}px`, height: `${size}px` }} />;
   }
 
-  // Try to get the icon from lucide-react
-  const IconComponent = (LucideIcons as any)[iconName] as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  // Try to get the icon from lucide-react (exact match first)
+  let IconComponent = (LucideIcons as any)[iconName] as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 
-  if (IconComponent) {
+  // If exact match not found, try case-insensitive lookup
+  if (!IconComponent) {
+    const iconNameLower = iconName.toLowerCase();
+    for (const key in LucideIcons) {
+      if (key.toLowerCase() === iconNameLower) {
+        const candidate = (LucideIcons as any)[key];
+        // Check if it's a valid component (function or forward ref object)
+        const isValid = typeof candidate === 'function' || 
+          (candidate && typeof candidate === 'object' && (candidate.$$typeof || candidate.render));
+        if (isValid) {
+          IconComponent = candidate as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+          break;
+        }
+      }
+    }
+  }
+
+  // Verify IconComponent is valid before rendering
+  const isValidComponent = IconComponent && 
+    (typeof IconComponent === 'function' || 
+     (typeof IconComponent === 'object' && IconComponent !== null && ((IconComponent as any).$$typeof || (IconComponent as any).render)));
+
+  if (isValidComponent) {
     return <IconComponent className={className} style={{ width: `${size}px`, height: `${size}px` }} />;
   }
 

@@ -27,6 +27,14 @@ export interface DemoBookmark {
   pinned?: boolean;
   folderNames?: string[]; // References to folder names
   tagNames?: string[]; // References to tag names
+  shareWithTeams?: string[]; // Team names to share with
+  shareWithUsers?: string[]; // User emails to share with
+}
+
+export interface DemoTeam {
+  name: string;
+  description?: string;
+  memberEmails: string[]; // User emails that are members
 }
 
 export interface DemoUserData {
@@ -35,6 +43,27 @@ export interface DemoUserData {
   tags: DemoTag[];
   bookmarks: DemoBookmark[];
 }
+
+export interface DemoSeedData {
+  users: DemoUserData[];
+  teams: DemoTeam[];
+}
+
+/**
+ * Demo teams configuration
+ */
+export const DEMO_TEAMS: DemoTeam[] = [
+  {
+    name: 'Development Team',
+    description: 'Team for development and engineering work',
+    memberEmails: ['admin@demo.slugbase', 'alice@demo.slugbase'],
+  },
+  {
+    name: 'Design Team',
+    description: 'Team for design and UX work',
+    memberEmails: ['admin@demo.slugbase', 'bob@demo.slugbase'],
+  },
+];
 
 /**
  * Demo users with their associated data
@@ -129,6 +158,42 @@ export const DEMO_DATA: DemoUserData[] = [
         folderNames: ['Design'],
         tagNames: ['tools'],
       },
+      {
+        title: 'PostgreSQL Docs',
+        url: 'https://www.postgresql.org/docs/',
+        slug: 'postgresql-docs',
+        forwardingEnabled: true,
+        folderNames: ['DevOps'],
+        tagNames: ['documentation', 'tools'],
+        shareWithTeams: ['Development Team'],
+      },
+      {
+        title: 'Nginx Documentation',
+        url: 'https://nginx.org/en/docs/',
+        slug: 'nginx-docs',
+        forwardingEnabled: true,
+        folderNames: ['DevOps'],
+        tagNames: ['documentation'],
+        shareWithTeams: ['Development Team'],
+      },
+      {
+        title: 'GitLab',
+        url: 'https://gitlab.com',
+        slug: 'gitlab',
+        forwardingEnabled: true,
+        folderNames: ['Development'],
+        tagNames: ['tools'],
+        shareWithUsers: ['alice@demo.slugbase'],
+      },
+      {
+        title: 'Webpack',
+        url: 'https://webpack.js.org',
+        slug: 'webpack',
+        forwardingEnabled: true,
+        folderNames: ['Development'],
+        tagNames: ['tools', 'documentation'],
+        shareWithTeams: ['Development Team'],
+      },
     ],
   },
   {
@@ -182,6 +247,59 @@ export const DEMO_DATA: DemoUserData[] = [
         forwardingEnabled: true,
         folderNames: ['Resources'],
         tagNames: ['css', 'tools'],
+      },
+      {
+        title: 'npm Documentation',
+        url: 'https://docs.npmjs.com',
+        slug: 'npm-docs',
+        forwardingEnabled: true,
+        folderNames: ['Resources'],
+        tagNames: ['tools', 'documentation'],
+        shareWithTeams: ['Development Team'],
+      },
+      {
+        title: 'ESLint',
+        url: 'https://eslint.org',
+        slug: 'eslint',
+        forwardingEnabled: true,
+        folderNames: ['Work Projects'],
+        tagNames: ['tools'],
+        shareWithTeams: ['Development Team'],
+      },
+      {
+        title: 'Prettier',
+        url: 'https://prettier.io',
+        slug: 'prettier',
+        forwardingEnabled: true,
+        folderNames: ['Work Projects'],
+        tagNames: ['tools'],
+        shareWithUsers: ['bob@demo.slugbase'],
+      },
+      {
+        title: 'Vite Documentation',
+        url: 'https://vitejs.dev',
+        slug: 'vite',
+        forwardingEnabled: true,
+        folderNames: ['Learning'],
+        tagNames: ['tools', 'learning'],
+        shareWithUsers: ['admin@demo.slugbase'],
+      },
+      {
+        title: 'Tailwind CSS',
+        url: 'https://tailwindcss.com',
+        slug: 'tailwind',
+        forwardingEnabled: true,
+        folderNames: ['Resources'],
+        tagNames: ['css', 'tools'],
+        shareWithTeams: ['Development Team'],
+      },
+      {
+        title: 'Next.js',
+        url: 'https://nextjs.org',
+        slug: 'nextjs',
+        forwardingEnabled: true,
+        folderNames: ['Learning'],
+        tagNames: ['react', 'learning'],
       },
     ],
   },
@@ -244,6 +362,59 @@ export const DEMO_DATA: DemoUserData[] = [
         forwardingEnabled: true,
         folderNames: ['Assets'],
         tagNames: ['resources'],
+      },
+      {
+        title: 'Adobe XD',
+        url: 'https://www.adobe.com/products/xd.html',
+        slug: 'adobe-xd',
+        forwardingEnabled: true,
+        folderNames: ['Tools'],
+        tagNames: ['design', 'tools'],
+        shareWithTeams: ['Design Team'],
+      },
+      {
+        title: 'Sketch',
+        url: 'https://www.sketch.com',
+        slug: 'sketch',
+        forwardingEnabled: true,
+        folderNames: ['Tools'],
+        tagNames: ['design', 'tools'],
+        shareWithTeams: ['Design Team'],
+      },
+      {
+        title: 'Material Design',
+        url: 'https://material.io/design',
+        slug: 'material-design',
+        forwardingEnabled: true,
+        folderNames: ['Inspiration'],
+        tagNames: ['design', 'ui', 'ux'],
+        shareWithUsers: ['alice@demo.slugbase'],
+      },
+      {
+        title: 'Awwwards',
+        url: 'https://www.awwwards.com',
+        slug: 'awwwards',
+        forwardingEnabled: true,
+        folderNames: ['Inspiration'],
+        tagNames: ['design', 'ui'],
+        shareWithTeams: ['Design Team'],
+      },
+      {
+        title: 'UI Movement',
+        url: 'https://uimovement.com',
+        slug: 'ui-movement',
+        forwardingEnabled: true,
+        folderNames: ['Inspiration'],
+        tagNames: ['design', 'ui'],
+      },
+      {
+        title: 'Pexels',
+        url: 'https://www.pexels.com',
+        slug: 'pexels',
+        forwardingEnabled: true,
+        folderNames: ['Assets'],
+        tagNames: ['resources'],
+        shareWithTeams: ['Design Team'],
       },
     ],
   },
