@@ -54,7 +54,7 @@ export default function BookmarkCard({
         selected
           ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
           : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-      } hover:shadow-lg transition-all duration-200 flex flex-col ${compact ? 'p-2.5 min-h-[180px]' : 'p-4'}`}
+      } hover:shadow-lg transition-all duration-200 flex flex-col ${compact ? 'p-2.5 min-h-[200px]' : 'p-4'}`}
     >
       <div className={`space-y-3 flex-1 flex flex-col ${compact ? 'space-y-2' : ''}`}>
         {/* Header with icon and title */}
@@ -128,34 +128,85 @@ export default function BookmarkCard({
           <span className="truncate">{bookmark.url}</span>
         </p>
 
-        {/* Tags & Folders */}
-        <div className={`flex flex-wrap gap-1.5 ${compact ? 'min-h-[40px]' : ''}`}>
+        {/* Folders - Always show one line */}
+        <div className="flex flex-wrap items-center gap-1.5 min-h-[24px]">
           {bookmark.folders && bookmark.folders.length > 0 ? (
-            bookmark.folders.slice(0, compact ? 1 : 2).map((folder) => (
-              <span
-                key={folder.id}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50`}
-              >
-                <FolderIcon iconName={folder.icon} size={12} className="text-blue-700 dark:text-blue-300" />
-                {folder.name}
-              </span>
-            ))
+            <>
+              {bookmark.folders.slice(0, compact ? 1 : 2).map((folder) => (
+                <span
+                  key={folder.id}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50`}
+                >
+                  <FolderIcon iconName={folder.icon} size={12} className="text-blue-700 dark:text-blue-300" />
+                  {folder.name}
+                </span>
+              ))}
+              {bookmark.folders.length > (compact ? 1 : 2) && (
+                <Tooltip
+                  content={
+                    <div className="space-y-1">
+                      <div className="font-semibold mb-1">{t('bookmarks.folders')}</div>
+                      {bookmark.folders.map((folder) => (
+                        <div key={folder.id} className="text-xs flex items-center gap-1.5">
+                          <FolderIcon iconName={folder.icon} size={12} className="text-blue-400" />
+                          {folder.name}
+                        </div>
+                      ))}
+                    </div>
+                  }
+                >
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50 cursor-help`}>
+                    +{bookmark.folders.length - (compact ? 1 : 2)}
+                  </span>
+                </Tooltip>
+              )}
+            </>
           ) : (
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400 rounded-md border border-gray-200 dark:border-gray-800/50`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400 rounded-md border border-gray-200 dark:border-gray-800/50 opacity-60`}>
               <FolderIcon iconName={null} size={12} className="text-gray-600 dark:text-gray-400" />
               {t('bookmarks.noFolder')}
             </span>
           )}
-          {bookmark.tags && bookmark.tags.length > 0 && (
-            bookmark.tags.slice(0, compact ? 2 : 2).map((tag) => (
-              <span
-                key={tag.id}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md border border-purple-200 dark:border-purple-800/50`}
-              >
-                <TagIcon className="h-3 w-3" />
-                {tag.name}
-              </span>
-            ))
+        </div>
+
+        {/* Tags - Always show one line */}
+        <div className="flex flex-wrap items-center gap-1.5 min-h-[24px]">
+          {bookmark.tags && bookmark.tags.length > 0 ? (
+            <>
+              {bookmark.tags.slice(0, compact ? 2 : 3).map((tag) => (
+                <span
+                  key={tag.id}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md border border-purple-200 dark:border-purple-800/50`}
+                >
+                  <TagIcon className="h-3 w-3" />
+                  {tag.name}
+                </span>
+              ))}
+              {bookmark.tags.length > (compact ? 2 : 3) && (
+                <Tooltip
+                  content={
+                    <div className="space-y-1">
+                      <div className="font-semibold mb-1">{t('bookmarks.tags')}</div>
+                      {bookmark.tags.map((tag) => (
+                        <div key={tag.id} className="text-xs flex items-center gap-1.5">
+                          <TagIcon className="h-3 w-3 text-purple-400" />
+                          {tag.name}
+                        </div>
+                      ))}
+                    </div>
+                  }
+                >
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md border border-purple-200 dark:border-purple-800/50 cursor-help`}>
+                    +{bookmark.tags.length - (compact ? 2 : 3)}
+                  </span>
+                </Tooltip>
+              )}
+            </>
+          ) : (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-gray-50 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400 rounded-md border border-gray-200 dark:border-gray-800/50 opacity-60`}>
+              <TagIcon className="h-3 w-3" />
+              {t('bookmarks.noTags') || 'No Tags'}
+            </span>
           )}
         </div>
 
