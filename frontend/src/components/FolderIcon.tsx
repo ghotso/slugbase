@@ -194,7 +194,7 @@ export default function FolderIcon({ iconName, className = '', size = 20 }: Fold
   // Verify IconComponent is valid before rendering
   const isValidComponent = IconComponent && 
     (typeof IconComponent === 'function' || 
-     (typeof IconComponent === 'object' && (IconComponent.$$typeof || (IconComponent as any).render)));
+     (typeof IconComponent === 'object' && IconComponent !== null && ((IconComponent as any).$$typeof || (IconComponent as any).render)));
 
   if (isValidComponent) {
     return <IconComponent className={className} style={{ width: `${size}px`, height: `${size}px` }} />;

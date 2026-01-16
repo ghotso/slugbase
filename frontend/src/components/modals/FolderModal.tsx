@@ -268,7 +268,7 @@ export default function FolderModal({
                 // Verify IconComponent is valid (function component or forward ref)
                 const isValidComponent = IconComponent && 
                   (typeof IconComponent === 'function' || 
-                   (typeof IconComponent === 'object' && (IconComponent.$$typeof || IconComponent.render)));
+                   (typeof IconComponent === 'object' && IconComponent !== null && ((IconComponent as any).$$typeof || (IconComponent as any).render)));
                 
                 if (!isValidComponent) return null;
                 
