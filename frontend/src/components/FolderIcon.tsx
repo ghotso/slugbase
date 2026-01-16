@@ -10,6 +10,7 @@ interface FolderIconProps {
 
 // Get all available icon names from lucide-react
 // Filter out non-icon exports and get all icon component names
+// Lucide icons are React forward ref components (objects with $$typeof and render method)
 function getAllIconNames(): string[] {
   const iconNames: string[] = [];
   const excludeNames = new Set([
@@ -36,14 +37,21 @@ function getAllIconNames(): string[] {
     // Skip names starting with lowercase (likely not icon components)
     if (name[0] && name[0] === name[0].toLowerCase()) continue;
     
+    // Skip names ending with 'Icon' (these are typically type exports)
+    if (name.endsWith('Icon')) continue;
+    
     const component = (LucideIcons as any)[name];
     
-    // Check if it's a function/component
-    if (typeof component !== 'function') continue;
+    // Check if it's a valid React component
+    // Lucide icons can be either:
+    // 1. Function components (typeof === 'function')
+    // 2. Forward ref components (object with $$typeof and render method)
+    const isFunctionComponent = typeof component === 'function';
+    const isForwardRefComponent = component && 
+      typeof component === 'object' && 
+      (component.$$typeof || component.render);
     
-    // Verify it's actually a React component by checking for render capability
-    // All Lucide icons are React components, so if it's a function starting with uppercase, it's likely an icon
-    if (name && name[0] === name[0].toUpperCase()) {
+    if (isFunctionComponent || isForwardRefComponent) {
       iconNames.push(name);
     }
   }
@@ -87,7 +95,6 @@ const popularIcons = [
   'Tool',
   'Hammer',
   'Screwdriver',
-  'WrenchIcon',
   'FolderPlus',
   'FolderMinus',
   'FolderCheck',
@@ -171,14 +178,25 @@ export default function FolderIcon({ iconName, className = '', size = 20 }: Fold
   if (!IconComponent) {
     const iconNameLower = iconName.toLowerCase();
     for (const key in LucideIcons) {
-      if (key.toLowerCase() === iconNameLower && typeof (LucideIcons as any)[key] === 'function') {
-        IconComponent = (LucideIcons as any)[key] as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-        break;
+      if (key.toLowerCase() === iconNameLower) {
+        const candidate = (LucideIcons as any)[key];
+        // Check if it's a valid component (function or forward ref object)
+        const isValid = typeof candidate === 'function' || 
+          (candidate && typeof candidate === 'object' && (candidate.$$typeof || candidate.render));
+        if (isValid) {
+          IconComponent = candidate as React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+          break;
+        }
       }
     }
   }
 
-  if (IconComponent) {
+  // Verify IconComponent is valid before rendering
+  const isValidComponent = IconComponent && 
+    (typeof IconComponent === 'function' || 
+     (typeof IconComponent === 'object' && (IconComponent.$$typeof || (IconComponent as any).render)));
+
+  if (isValidComponent) {
     return <IconComponent className={className} style={{ width: `${size}px`, height: `${size}px` }} />;
   }
 

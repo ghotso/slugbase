@@ -249,17 +249,28 @@ export default function FolderModal({
                 let IconComponent = (LucideIcons as any)[iconName];
                 
                 // If not found, try case-insensitive lookup
-                if (!IconComponent || typeof IconComponent !== 'function') {
+                if (!IconComponent) {
                   const iconNameLower = iconName.toLowerCase();
                   for (const key in LucideIcons) {
-                    if (key.toLowerCase() === iconNameLower && typeof (LucideIcons as any)[key] === 'function') {
-                      IconComponent = (LucideIcons as any)[key];
-                      break;
+                    if (key.toLowerCase() === iconNameLower) {
+                      const candidate = (LucideIcons as any)[key];
+                      // Check if it's a valid component (function or forward ref object)
+                      const isValid = typeof candidate === 'function' || 
+                        (candidate && typeof candidate === 'object' && (candidate.$$typeof || candidate.render));
+                      if (isValid) {
+                        IconComponent = candidate;
+                        break;
+                      }
                     }
                   }
                 }
                 
-                if (!IconComponent || typeof IconComponent !== 'function') return null;
+                // Verify IconComponent is valid (function component or forward ref)
+                const isValidComponent = IconComponent && 
+                  (typeof IconComponent === 'function' || 
+                   (typeof IconComponent === 'object' && (IconComponent.$$typeof || IconComponent.render)));
+                
+                if (!isValidComponent) return null;
                 
                 return (
                   <button
