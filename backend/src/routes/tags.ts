@@ -44,7 +44,15 @@ router.get('/', async (req, res) => {
   const authReq = req as AuthRequest;
   try {
     const userId = authReq.user!.id;
-    const tags = await query('SELECT * FROM tags WHERE user_id = ? ORDER BY name', [userId]);
+    
+    // Add sorting
+    const sortBy = (req.query.sort_by as string) || 'alphabetical';
+    let orderBy = 'ORDER BY name ASC';
+    if (sortBy === 'recently_added') {
+      orderBy = 'ORDER BY created_at DESC';
+    }
+    
+    const tags = await query(`SELECT * FROM tags WHERE user_id = ? ${orderBy}`, [userId]);
     res.json(tags);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

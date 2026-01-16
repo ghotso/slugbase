@@ -12,7 +12,6 @@ import ImportModal from '../components/modals/ImportModal';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import BookmarkCard from '../components/bookmarks/BookmarkCard';
-import BookmarkListItem from '../components/bookmarks/BookmarkListItem';
 import BookmarkTableView from '../components/bookmarks/BookmarkTableView';
 import { BulkMoveModal, BulkTagModal, BulkShareModal } from '../components/bookmarks/BulkActionModals';
 
@@ -293,6 +292,17 @@ export default function Bookmarks() {
     const url = `${baseUrl}/${user?.user_key}/${bookmark.slug}`;
     navigator.clipboard.writeText(url);
     showToast(t('common.copied'), 'success');
+  }
+
+  async function handleOpenBookmark(bookmark: Bookmark) {
+    // Track access asynchronously (don't wait for it to complete)
+    api.post(`/bookmarks/${bookmark.id}/track-access`).catch((error) => {
+      console.error('Failed to track bookmark access:', error);
+      // Don't show error to user, just log it
+    });
+    
+    // Open the bookmark URL
+    window.open(bookmark.url, '_blank', 'noopener,noreferrer');
   }
 
   function handleModalClose() {
@@ -608,12 +618,13 @@ export default function Bookmarks() {
               onEdit={() => handleEdit(bookmark)}
               onDelete={() => handleDelete(bookmark.id, bookmark.title)}
               onCopyUrl={() => handleCopyUrl(bookmark)}
+              onOpen={() => handleOpenBookmark(bookmark)}
               bulkMode={bulkMode}
               t={t}
             />
           ))}
         </div>
-      ) : viewMode === 'list' && !compactMode ? (
+      ) : viewMode === 'list' ? (
         <BookmarkTableView
           bookmarks={sortedBookmarks}
           selectedBookmarks={selectedBookmarks}
@@ -622,29 +633,13 @@ export default function Bookmarks() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onCopyUrl={handleCopyUrl}
+          onOpen={handleOpenBookmark}
           bulkMode={bulkMode}
           user={user}
           t={t}
+          compact={compactMode}
         />
-      ) : (
-        <div className="space-y-2">
-          {sortedBookmarks.map((bookmark) => (
-            <BookmarkListItem
-              key={bookmark.id}
-              bookmark={bookmark}
-              compact={compactMode}
-              selected={selectedBookmarks.has(bookmark.id)}
-              onSelect={() => toggleSelectBookmark(bookmark.id)}
-              onEdit={() => handleEdit(bookmark)}
-              onDelete={() => handleDelete(bookmark.id, bookmark.title)}
-              onCopyUrl={() => handleCopyUrl(bookmark)}
-              bulkMode={bulkMode}
-              user={user}
-              t={t}
-            />
-          ))}
-        </div>
-      )}
+      ) : null}
 
       {/* Search Engine Setup Guide Note */}
       {sortedBookmarks.length > 0 && (

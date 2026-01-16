@@ -25,6 +25,7 @@ interface BookmarkCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onCopyUrl: () => void;
+  onOpen?: () => void;
   bulkMode: boolean;
   t: any;
 }
@@ -37,6 +38,7 @@ export default function BookmarkCard({
   onEdit,
   onDelete,
   onCopyUrl,
+  onOpen,
   bulkMode,
   t,
 }: BookmarkCardProps) {
@@ -52,7 +54,7 @@ export default function BookmarkCard({
         selected
           ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20'
           : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-      } hover:shadow-lg transition-all duration-200 flex flex-col ${compact ? 'p-2.5' : 'p-4'}`}
+      } hover:shadow-lg transition-all duration-200 flex flex-col ${compact ? 'p-2.5 min-h-[180px]' : 'p-4'}`}
     >
       <div className={`space-y-3 flex-1 flex flex-col ${compact ? 'space-y-2' : ''}`}>
         {/* Header with icon and title */}
@@ -127,9 +129,9 @@ export default function BookmarkCard({
         </p>
 
         {/* Tags & Folders */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className={`flex flex-wrap gap-1.5 ${compact ? 'min-h-[40px]' : ''}`}>
           {bookmark.folders && bookmark.folders.length > 0 ? (
-            bookmark.folders.slice(0, 2).map((folder) => (
+            bookmark.folders.slice(0, compact ? 1 : 2).map((folder) => (
               <span
                 key={folder.id}
                 className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800/50`}
@@ -145,7 +147,7 @@ export default function BookmarkCard({
             </span>
           )}
           {bookmark.tags && bookmark.tags.length > 0 && (
-            bookmark.tags.slice(0, 2).map((tag) => (
+            bookmark.tags.slice(0, compact ? 2 : 2).map((tag) => (
               <span
                 key={tag.id}
                 className={`inline-flex items-center gap-1 px-2 py-0.5 ${compact ? 'text-xs' : 'text-xs'} font-medium bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md border border-purple-200 dark:border-purple-800/50`}
@@ -174,17 +176,29 @@ export default function BookmarkCard({
         )}
 
         {/* Actions */}
-        <div className={`flex gap-2 pt-3 mt-auto border-t border-gray-100 dark:border-gray-700/50 ${compact ? 'pt-2' : ''}`}>
-          <a
-            href={bookmark.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1"
-          >
-            <Button variant="primary" size="sm" icon={ExternalLink} className={`w-full ${compact ? 'text-xs px-2 py-1' : 'text-xs'}`}>
+        <div className={`flex gap-2 pt-3 mt-auto border-t border-gray-100 dark:border-gray-700/50 ${compact ? 'pt-2 mt-2' : ''}`}>
+          {onOpen ? (
+            <Button 
+              variant="primary" 
+              size="sm" 
+              icon={ExternalLink} 
+              className={`flex-1 ${compact ? 'text-xs px-2 py-1' : 'text-xs'}`}
+              onClick={onOpen}
+            >
               {t('bookmarks.open')}
             </Button>
-          </a>
+          ) : (
+            <a
+              href={bookmark.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1"
+            >
+              <Button variant="primary" size="sm" icon={ExternalLink} className={`w-full ${compact ? 'text-xs px-2 py-1' : 'text-xs'}`}>
+                {t('bookmarks.open')}
+              </Button>
+            </a>
+          )}
           {bookmark.bookmark_type === 'own' && (
             <>
               <Button
